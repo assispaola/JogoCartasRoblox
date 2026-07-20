@@ -4,20 +4,36 @@
 	jogador no DataStore. TODO outro sistema (economia, inventário, etc.)
 	lê e escreve através deste serviço - ninguém mexe direto no DataStore.
 
-	ESTRUTURA DE DADOS (v2 - cartas individuais):
+	ESTRUTURA DE DADOS (v2 - Álbum/Mochila por criatura, não mais por cópia):
 		data.money             -> number
 		data.diamonds          -> number
 		data.totalIncomePerSecond -> number
 		data.lastSaveTimestamp -> number (os.time())
-		data.nextCardId        -> number (contador pra gerar IDs únicos de carta)
+		data.album              -> { [creatureId] = { totalCopias, grau } }  (fonte da verdade - raridade
+		                            é SEMPRE derivada de totalCopias, ver AlbumService.lua/AlbumEvolutionCurve.lua)
+		data.mochila            -> { [creatureId] = { favorito, noSlot } }  (1 registro por criatura
+		                            descoberta, capacidade em data.maxCards)
+		data.altarSacrificio    -> { staged = { [creatureId] = true } }  (staging manual pras Provas
+		                            de Renascimento - ver AltarSacrificioService.lua)
+		data.discovered         -> { ["<creatureId>_<rarity>"] = true }  (Diamante de descoberta,
+		                            disparado de dentro do AlbumService)
+		data.placedSlots        -> { [slotId] = creatureId }  (Slots de Base - só cartas aqui geram $/s)
+
+		Campos abaixo só existem em saves ANTIGOS (modelo por cópia física) e
+		são lidos uma única vez pela migration em LoadData pra popular
+		album/mochila; contas novas nunca os recebem de createDefaultData():
 		data.cards              -> { [cardId] = { creatureId, rarity, grade, placed, slotId } }
-		data.discovered         -> { ["<creatureId>_<rarity>"] = true }  (pro Índice/Diamante)
-		data.placedSlots        -> { [slotId] = cardId }  (mapa reverso, útil pra achar rápido o que tá em cada slot)
+		data.relicario          -> { [cardId] = { creatureId, rarity, grade } }
+		data.nextCardId         -> number
 
 	Local: ServerScriptService/Server/Systems/PlayerDataService.lua
 ]]
 
 local DataStoreService = game:GetService("DataStoreService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Rarities = require(ReplicatedStorage.Shared.Data.Rarities)
+local AlbumEvolutionCurve = require(ReplicatedStorage.Shared.Data.AlbumEvolutionCurve)
 
 local PlayerDataService = {}
 
@@ -34,11 +50,15 @@ local function createDefaultData()
 		diamonds = 0,
 		totalIncomePerSecond = 0,
 		lastSaveTimestamp = os.time(),
-		nextCardId = 1,
-		cards = {},
+		album = {}, -- [creatureId] = { raridade, pontos, grau } - fonte da verdade (AlbumService)
+		mochila = {}, -- [creatureId] = { favorito, noSlot } - 1 registro por criatura descoberta
+		altarSacrificio = { staged = {} }, -- staging manual pras Provas de Renascimento
 		discovered = {},
-		placedSlots = {},
+		placedSlots = {}, -- [slotId] = creatureId
 		maxCards = 200, -- capacidade da Mochila (expansível via Loja/Robux mais pra frente)
+		maxPlacedSlots = 20, -- teto dos Slots de Base, independente de nível/Renascimento (gamepass "slotsExtras")
+		packStates = {}, -- [packKey] = { lastOpenedAt, timesOpened } - usado por PackService.CanOpen
+		highestUnlockedGeneralPackId = 1, -- ladder Geral (Novato=1 sempre liberado) - PERSISTENTE, nunca reseta
 		autoSell = {
 			byRarity = {}, -- ["Bronze"] = true/false
 			byClan = {}, -- ["Ordem Celestial"] = true/false
@@ -56,8 +76,6 @@ local function createDefaultData()
 		},
 		renascimentoLevel = 0, -- quantas vezes já renasceu
 		renascimentoMultiplier = 1.0, -- multiplicador permanente de $/s (+10% por ciclo)
-		relicario = {}, -- [cardId] = {creatureId, rarity, grade} - cartas protegidas do reset
-		relicarioSlots = 3, -- capacidade inicial do Relicário
 		wheel = {
 			cycleStart = 0, -- os.time() de quando o giro grátis atual liberou (0 = nunca girou)
 			freeSpinUsed = false,
@@ -78,13 +96,73 @@ local function createDefaultData()
 			ultraSorte = false, -- Ultra Sorte (Despertar)
 			sorteDiamante = false, -- Sorte pra classificar cartas (Despertar)
 			inventarioExtra = false, -- Mochila +500
-			bancoExtra = false, -- Relicário +5 slots
+			slotsExtras = false, -- +5 Slots de Base
 			aberturaRapida = false, -- abrir pacotes mais rápido (client-side, Fase 5)
 			pacotesExclusivos = false, -- acesso a pacotes exclusivos
 		},
 		slotPending = {}, -- [slotId] = dinheiro acumulado esperando coleta (só usado sem Coleta Automática)
 		processedReceipts = {}, -- [receiptId] = true (evita creditar Dev Product duas vezes)
 	}
+end
+
+-- Migration do modelo antigo (cartas individuais por cópia, `data.cards` +
+-- `data.relicario`) pro novo modelo por criatura (`data.album`/`data.mochila`,
+-- raridade derivada de `totalCopias` - ver AlbumEvolutionCurve.lua).
+-- Idempotente: só roda se `loaded.album` ainda estiver vazio E houver algo
+-- pra migrar - depois da primeira vez, `album` nunca mais fica vazio pra um
+-- jogador que já tinha cartas, então isso não roda de novo em saves já
+-- migrados. Não há como recuperar o histórico exato de cópias empilhadas
+-- do modelo antigo (era rastreado por evolução/fusão manual, não por
+-- contagem bruta) - a aproximação usada é: `totalCopias` = o PISO mínimo
+-- da MAIOR raridade já alcançada por aquela criatura (mesmo cálculo que um
+-- pull sortudo de pacote usaria, ver AlbumEvolutionCurve.FloorForRarity) -
+-- suficiente pra preservar a raridade exibida, sem inventar histórico.
+local function migrateCardsToAlbum(loaded)
+	local hasOldCards = type(loaded.cards) == "table" and next(loaded.cards) ~= nil
+	local hasOldRelicario = type(loaded.relicario) == "table" and next(loaded.relicario) ~= nil
+	local albumIsEmpty = type(loaded.album) ~= "table" or next(loaded.album) == nil
+
+	if not albumIsEmpty or (not hasOldCards and not hasOldRelicario) then
+		return
+	end
+
+	loaded.album = loaded.album or {}
+	loaded.mochila = loaded.mochila or {}
+
+	local function considerCopy(creatureId: number, rarity: string, grade: number?)
+		local rarityData = Rarities.ById[rarity :: Rarities.RarityId]
+		if not rarityData then
+			return
+		end
+
+		local floor = AlbumEvolutionCurve.FloorForRarity(rarity :: Rarities.RarityId)
+
+		local existing = loaded.album[creatureId]
+		if not existing then
+			loaded.album[creatureId] = { totalCopias = math.max(1, floor), grau = grade or Rarities.BaseAwakenGrade }
+			loaded.mochila[creatureId] = { favorito = false, noSlot = false }
+			return
+		end
+
+		if floor > existing.totalCopias then
+			existing.totalCopias = floor
+		end
+		if (grade or 0) > existing.grau then
+			existing.grau = grade or existing.grau
+		end
+	end
+
+	if hasOldCards then
+		for _, card in loaded.cards do
+			considerCopy(card.creatureId, card.rarity, card.grade)
+		end
+	end
+
+	if hasOldRelicario then
+		for _, card in loaded.relicario do
+			considerCopy(card.creatureId, card.rarity, card.grade)
+		end
+	end
 end
 
 local sessionData: { [number]: any } = {}
@@ -120,6 +198,10 @@ function PlayerDataService.LoadData(player: Player): boolean
 				end
 			end
 		end
+
+		-- Migração do modelo antigo por cópia (data.cards/data.relicario) pro
+		-- Álbum/Mochila por criatura - ver comentário de migrateCardsToAlbum.
+		migrateCardsToAlbum(loaded)
 
 		sessionData[player.UserId] = loaded
 		return true

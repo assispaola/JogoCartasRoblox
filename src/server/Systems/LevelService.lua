@@ -3,7 +3,13 @@
 	Checa se o jogador cumpre os requisitos do Desafio de Nível atual, e
 	processa a subida de nível (incluindo consumir os sacrifícios, se
 	houver). A função CheckRequirement é genérica o bastante pra ser
-	reaproveitada depois pelas Provas de Renascimento.
+	reaproveitada pelas Provas de Renascimento.
+
+	Requisitos de posse/sacrifício agora leem do Álbum/Mochila (1 registro
+	por criatura descoberta), não mais de `data.cards` por cópia física.
+	"Sacrificar" uma cópia vira "remover 1 ponto do Álbum daquela criatura"
+	(AlbumService.RemoverPontos) - a criatura continua descoberta (só perde
+	1 unidade de progresso), consistente com a venda de cartas.
 
 	Local: ServerScriptService/Server/Systems/LevelService.lua
 ]]
@@ -13,6 +19,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local PlayerDataService = require(ServerScriptService.Server.Systems.PlayerDataService)
 local InventoryService = require(ServerScriptService.Server.Systems.InventoryService)
+local AlbumService = require(ServerScriptService.Server.Systems.AlbumService)
 local StatsService = require(ServerScriptService.Server.Systems.StatsService)
 local ChallengeCatalog = require(ReplicatedStorage.Shared.Data.ChallengeCatalog)
 local Creatures = require(ReplicatedStorage.Shared.Data.Creatures)
@@ -22,40 +29,34 @@ local LevelService = {}
 
 local EconomyService = nil -- carregado em Init() pra evitar circular require
 
+-- Quantas criaturas DISTINTAS descobertas o jogador tem de um clã.
+local function countClan(player: Player, clan: string): number
+	return #InventoryService.FindDiscoveredCreatures(player, function(_entry, creatureId)
+		local creature = Creatures[creatureId]
+		return creature ~= nil and creature.clan == clan
+	end)
+end
+
 -- Verifica se o jogador possui QUALQUER carta de um clã específico.
 local function ownsClan(player: Player, clan: string): boolean
-	local data = PlayerDataService.GetData(player)
-	if not data then
-		return false
-	end
-
-	for _, card in data.cards do
-		local creature = Creatures[card.creatureId]
-		if creature and creature.clan == clan then
-			return true
-		end
-	end
-	return false
+	return countClan(player, clan) > 0
 end
 
 -- Verifica se o jogador possui uma criatura específica (qualquer raridade).
 local function ownsCreature(player: Player, creatureId: number): boolean
-	local data = PlayerDataService.GetData(player)
-	if not data then
-		return false
-	end
+	return InventoryService.GetMochilaEntry(player, creatureId) ~= nil
+end
 
-	for _, card in data.cards do
-		if card.creatureId == creatureId then
-			return true
-		end
-	end
-	return false
+-- Quantas criaturas DISTINTAS descobertas o jogador tem numa raridade
+-- específica (usado por `sacrificeCardsByRarity`/checks equivalentes).
+local function countRarity(player: Player, rarity: string): number
+	return #InventoryService.FindDiscoveredCreatures(player, function(entry)
+		return entry.raridade == rarity
+	end)
 end
 
 -- Checa se um requisito específico está cumprido. Retorna:
 -- (cumprido: boolean, valorAtual: number, valorNecessário: number)
--- Os dois últimos valores são só pra UI mostrar progresso (ex: "3/5 pacotes").
 function LevelService.CheckRequirement(player: Player, req)
 	local data = PlayerDataService.GetData(player)
 	if not data then
@@ -81,25 +82,23 @@ function LevelService.CheckRequirement(player: Player, req)
 	elseif req.type == "ownClan" then
 		local owns = ownsClan(player, req.clan)
 		return owns, owns and 1 or 0, 1
+	elseif req.type == "ownClanCount" then
+		-- Novo: posse de X criaturas DISTINTAS de um clã (não mais cópias
+		-- físicas) - usado pelas Provas de Renascimento reformuladas.
+		local current = countClan(player, req.clan)
+		return current >= req.count, current, req.count
 	elseif req.type == "ownCreature" then
 		local owns = ownsCreature(player, req.creatureId)
 		return owns, owns and 1 or 0, 1
 	elseif req.type == "sacrificeCardsByRarity" then
-		local count = #InventoryService.FindUnplacedCards(player, function(c)
-			return c.rarity == req.rarity
-		end)
+		local count = countRarity(player, req.rarity)
 		return count >= req.count, count, req.count
 	elseif req.type == "sacrificeCardsByClan" then
-		local count = #InventoryService.FindUnplacedCards(player, function(c)
-			local creature = Creatures[c.creatureId]
-			return creature ~= nil and creature.clan == req.clan
-		end)
+		local count = countClan(player, req.clan)
 		return count >= req.count, count, req.count
 	elseif req.type == "sacrificeSpecificCreature" then
-		local count = #InventoryService.FindUnplacedCards(player, function(c)
-			return c.creatureId == req.creatureId
-		end)
-		return count >= 1, count, 1
+		local owns = ownsCreature(player, req.creatureId)
+		return owns, owns and 1 or 0, 1
 	end
 
 	warn("[LevelService] Tipo de requisito desconhecido: " .. tostring(req.type))
@@ -162,25 +161,22 @@ function LevelService.TryLevelUp(player: Player)
 		if req.type == "sacrificeMoney" then
 			EconomyService.TrySpendMoney(player, req.amount)
 		elseif req.type == "sacrificeCardsByRarity" then
-			local matches = InventoryService.FindUnplacedCards(player, function(c)
-				return c.rarity == req.rarity
+			local matches = InventoryService.FindDiscoveredCreatures(player, function(entry)
+				return entry.raridade == req.rarity
 			end)
-			for i = 1, req.count do
-				InventoryService.RemoveCard(player, matches[i])
+			for i = 1, math.min(req.count, #matches) do
+				AlbumService.RemoverPontos(player, matches[i], 1)
 			end
 		elseif req.type == "sacrificeCardsByClan" then
-			local matches = InventoryService.FindUnplacedCards(player, function(c)
-				local creature = Creatures[c.creatureId]
+			local matches = InventoryService.FindDiscoveredCreatures(player, function(_entry, creatureId)
+				local creature = Creatures[creatureId]
 				return creature ~= nil and creature.clan == req.clan
 			end)
-			for i = 1, req.count do
-				InventoryService.RemoveCard(player, matches[i])
+			for i = 1, math.min(req.count, #matches) do
+				AlbumService.RemoverPontos(player, matches[i], 1)
 			end
 		elseif req.type == "sacrificeSpecificCreature" then
-			local matches = InventoryService.FindUnplacedCards(player, function(c)
-				return c.creatureId == req.creatureId
-			end)
-			InventoryService.RemoveCard(player, matches[1])
+			AlbumService.RemoverPontos(player, req.creatureId, 1)
 		end
 	end
 
@@ -198,8 +194,6 @@ function LevelService.Init()
 		if not success then
 			Remotes.LevelUpResult:FireClient(player, false, resultOrError)
 		end
-		-- Em caso de sucesso, o próprio TryLevelUp já disparou o
-		-- LevelUpResult com os dados certos.
 	end)
 
 	Remotes.ChallengeStatusRequest.OnServerEvent:Connect(function(player: Player)

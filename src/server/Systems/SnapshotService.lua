@@ -4,7 +4,7 @@
 	usado tanto automaticamente ao entrar no jogo (Main.server.lua chama
 	isso depois de carregar os dados) quanto sob demanda, se o cliente
 	precisar re-sincronizar (ex: depois de reconectar, ou ao abrir uma UI
-	que precisa do estado completo, como a Mochila ou o Índice).
+	que precisa do estado completo, como a Mochila ou o Álbum).
 
 	Local: ServerScriptService/Server/Systems/SnapshotService.lua
 ]]
@@ -33,13 +33,14 @@ function SnapshotService.BuildSnapshot(player: Player)
 		totalIncomePerSecond = data.totalIncomePerSecond,
 		level = data.level,
 		stats = data.stats,
-		cards = data.cards,
+		album = data.album,
+		mochila = data.mochila,
+		altarSacrificio = data.altarSacrificio,
+		placedSlots = data.placedSlots,
 		discovered = data.discovered,
 		maxCards = data.maxCards,
 		autoSell = data.autoSell,
 		handSlots = data.handSlots,
-		relicario = data.relicario,
-		relicarioSlots = data.relicarioSlots,
 		renascimentoLevel = data.renascimentoLevel,
 		renascimentoMultiplier = data.renascimentoMultiplier,
 		gamepasses = data.gamepasses,

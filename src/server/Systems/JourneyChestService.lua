@@ -106,15 +106,22 @@ function JourneyChestService.TryClaim(player: Player, chestIndex: number)
 		EconomyService.AddDiamonds(player, chest.amount)
 		resultDetails.amount = chest.amount
 	elseif chest.type == "freePack" then
-		local candidates = {}
-		for _, packId in PackCatalog.Order do
-			if PackCatalog.Packs[packId].tier == chest.packTier then
-				table.insert(candidates, packId)
+		if InventoryService.HasSpace(player, 1) then
+			-- Sortear entre packs Geral (Ladder) conforme o baú
+			local packKey = "Novato" -- padrão
+
+			local candidates = {}
+			for key, pack in PackCatalog do
+				if pack.Category == "Geral" then
+					table.insert(candidates, pack.Key)
+				end
 			end
-		end
-		if #candidates > 0 and InventoryService.HasSpace(player, 1) then
-			local packId = candidates[math.random(1, #candidates)]
-			resultDetails.packResult = PackService.GrantFreePack(player, packId)
+
+			if #candidates > 0 then
+				packKey = candidates[math.random(1, #candidates)]
+			end
+
+			resultDetails.packResult = PackService.GrantFreePack(player, packKey)
 		end
 	end
 

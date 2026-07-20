@@ -29,15 +29,15 @@ local clanSeeds = {
 	{ order = 4,  name = "Abismo Glacial",         element = "Gelo",          colorHex = "#AED6F1" },
 	{ order = 5,  name = "Maré Eterna",            element = "Água",         colorHex = "#0E5C52" },
 	{ order = 6,  name = "Forja Ígnea",            element = "Fogo",          colorHex = "#D30D0D" },
-	{ order = 7,  name = "Tempestade Rúnica",      element = "Trovão",        colorHex = "#E4F797" },
+	{ order = 7,  name = "Tempestade Rúnica",      element = "Trovão",        colorHex = "#FF99CA" },
 	{ order = 8,  name = "Rocha Ancestral",        element = "Terra",         colorHex = "#935116" },
 	{ order = 9,  name = "Areia Amaldiçoada",      element = "Morte",         colorHex = "#AFA88C" },
 	{ order = 10, name = "Selva Esmeralda",        element = "Veneno",        colorHex = "#147B16" },
 	{ order = 11, name = "Constelação Arcana",     element = "Astral",        colorHex = "#B23488" },
 	{ order = 12, name = "Profundezas Abissais",   element = "Mar Profundo",  colorHex = "#231443" },
-	{ order = 13, name = "Chama Vulcânica",        element = "Lava",          colorHex = "#66192B" },
+	{ order = 13, name = "Chama Vulcânica",        element = "Lava",          colorHex = "#3D0F17" },
 	{ order = 14, name = "Névoa Espectral",        element = "Fantasma",      colorHex = "#AAB7B8" },
-	{ order = 15, name = "Engrenagem Rúnica",      element = "Tecnomancia",   colorHex = "#4B9B90" },
+	{ order = 15, name = "Engrenagem Rúnica",      element = "Tecnomancia",   colorHex = "#DBF470" },
 }
 
 -- `clanSeeds` não tem o campo `color` ainda (calculado abaixo por

@@ -21,8 +21,9 @@ local HandService = {}
 
 local HAND_SLOT_COUNT = 10
 
--- Fixa uma carta num slot da Mão (1 a 10). Se o slot já tiver algo, substitui.
-function HandService.PinCard(player: Player, slotIndex: number, cardId: number): boolean
+-- Fixa uma criatura (por creatureId) num slot da Mão (1 a 10). Se o slot já
+-- tiver algo, substitui.
+function HandService.PinCard(player: Player, slotIndex: number, creatureId: number): boolean
 	local data = PlayerDataService.GetData(player)
 	if not data then
 		return false
@@ -32,11 +33,11 @@ function HandService.PinCard(player: Player, slotIndex: number, cardId: number):
 		return false
 	end
 
-	if not data.cards[cardId] then
-		return false -- carta não existe (foi vendida, fundida, etc.)
+	if not data.mochila[creatureId] then
+		return false -- criatura não descoberta (ou foi vendida até sumir)
 	end
 
-	data.handSlots[slotIndex] = cardId
+	data.handSlots[slotIndex] = creatureId
 	return true
 end
 

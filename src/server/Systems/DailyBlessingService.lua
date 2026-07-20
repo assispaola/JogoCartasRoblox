@@ -82,15 +82,8 @@ function DailyBlessingService.TryClaim(player: Player)
 			EconomyService.AddDiamonds(player, reward.amount)
 		end
 
-		local candidates = {}
-		for _, packId in PackCatalog.Order do
-			if PackCatalog.Packs[packId].tier == reward.packTier then
-				table.insert(candidates, packId)
-			end
-		end
-		if #candidates > 0 and InventoryService.HasSpace(player, 1) then
-			local packId = candidates[math.random(1, #candidates)]
-			resultDetails.packResult = PackService.GrantFreePack(player, packId)
+		if InventoryService.HasSpace(player, 1) then
+			resultDetails.packResult = PackService.GrantFreePack(player, "BencaoDiaria")
 		end
 	end
 

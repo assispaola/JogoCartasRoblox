@@ -1,62 +1,40 @@
 --[[
 	DespertarService.lua
-	O Altar do Despertar: gasta Diamante pra tentar sortear um grau melhor
-	numa carta específica. Regra de design ATUALIZADA: o resultado sorteado
-	sempre substitui o grau atual, pra melhor OU PRA PIOR - risco real a
-	cada tentativa (downgrade é possível), pra não virar um sistema
-	"seguro" demais.
+
+	OBSOLETO - substituído por AlbumService.RollDespertar. Sob o modelo de
+	Álbum, o grau de Despertar é 1 campo por CRIATURA (data.album[creatureId].grau),
+	não mais por cópia física (cardId) - este arquivo (que ainda opera em
+	cima de `InventoryService.GetCard(player, cardId)`, função que não
+	existe mais) fica mantido só de referência histórica, sem uso. Não
+	chamar `.Init()` (Main.server.lua já religou `Remotes.AwakenRequest`
+	através de `AlbumService.Init()`).
+
+	Comportamento antigo (histórico): gastava Diamante pra tentar sortear um
+	grau melhor numa carta específica (cardId) - resultado sorteado sempre
+	substituía o grau atual, pra melhor ou pra pior.
 
 	Local: ServerScriptService/Server/Systems/DespertarService.lua
 ]]
 
-local ServerScriptService = game:GetService("ServerScriptService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
-local InventoryService = require(ServerScriptService.Server.Systems.InventoryService)
-local PlayerDataService = require(ServerScriptService.Server.Systems.PlayerDataService)
-local Rarities = require(ReplicatedStorage.Shared.Data.Rarities)
+-- Requires do corpo original (InventoryService/PlayerDataService/Rarities/
+-- StatsService, além de AWAKEN_COST/LUCK_GAMEPASS_BONUS_ROLLS/getExtraRolls)
+-- removidos - só sobrevivem dentro do bloco comentado abaixo, de
+-- referência histórica.
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
-local StatsService = require(ServerScriptService.Server.Systems.StatsService)
 
 local DespertarService = {}
 
--- Custo em Diamante de cada tentativa. Fixo por enquanto - dá pra pensar
--- num custo crescente por grau atual mais pra frente, se o balanceamento
--- pedir.
-local AWAKEN_COST = 15
-
--- Quantas rolagens extras ("melhor de N") cada gamepass de sorte concede.
--- Todos os que o jogador possui se somam (por isso "acumula com outros
--- produtos de sorte").
-local LUCK_GAMEPASS_BONUS_ROLLS = {
-	sorteCeleste = 1,
-	ultraSorte = 2,
-	sorteDiamante = 1,
-}
-
--- EconomyService é carregado dentro de Init() (mesmo padrão do
--- InventoryService) pra evitar circular require.
-local EconomyService = nil
-
--- Soma as rolagens extras de todos os gamepasses de sorte que o jogador
--- possui.
-local function getExtraRolls(player: Player): number
-	local data = PlayerDataService.GetData(player)
-	if not data then
-		return 0
-	end
-
-	local extra = 0
-	for gamepassKey, bonusRolls in LUCK_GAMEPASS_BONUS_ROLLS do
-		if data.gamepasses[gamepassKey] then
-			extra += bonusRolls
-		end
-	end
-	return extra
+-- OBSOLETO - corpo original comentado abaixo só de referência histórica.
+-- `InventoryService.GetCard` não existe mais (grau vive em
+-- data.album[creatureId].grau, não por cardId) - chamar isso daria erro.
+function DespertarService.TryAwaken(player: Player, cardId: number)
+	return false, "DespertarService está obsoleto - use AlbumService.RollDespertar(player, creatureId)"
 end
 
--- Tenta despertar uma carta. Retorna true + dados do resultado, ou
--- false + motivo do erro.
+--[[ Corpo original (histórico, não funciona mais - ver AlbumService.RollDespertar):
+
 function DespertarService.TryAwaken(player: Player, cardId: number)
 	local card = InventoryService.GetCard(player, cardId)
 	if not card then
@@ -101,10 +79,9 @@ function DespertarService.TryAwaken(player: Player, cardId: number)
 		worsened = worsened,
 	}
 end
+]]
 
 function DespertarService.Init()
-	EconomyService = require(ServerScriptService.Server.Systems.EconomyService)
-
 	Remotes.AwakenRequest.OnServerEvent:Connect(function(player: Player, cardId: number)
 		local success, resultOrError = DespertarService.TryAwaken(player, cardId)
 

@@ -46,7 +46,7 @@ function AutoSellService.SetToggle(player: Player, category: string, name: strin
 	end
 
 	if category == "rarity" then
-		if not Rarities.ById[name] then
+		if not Rarities.ById[name :: Rarities.RarityId] then
 			return false
 		end
 		data.autoSell.byRarity[name] = enabled or nil -- nil em vez de false, pra não inflar o save à toa

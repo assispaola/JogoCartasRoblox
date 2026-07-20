@@ -2,7 +2,7 @@
 	GamepassService.lua
 	Verifica quais Gamepasses o jogador possui (ao entrar, e sempre que
 	compra um novo), aplica os efeitos permanentes correspondentes
-	(Mochila +500, Relicário +5, etc.), e processa a compra de pacotes de
+	(Mochila +500, Slots de Base +5, etc.), e processa a compra de pacotes de
 	Diamante (Dev Products, consumíveis).
 
 	Local: ServerScriptService/Server/Systems/GamepassService.lua
@@ -23,8 +23,8 @@ local EconomyService = nil -- carregado em Init() pra evitar circular require
 
 local BASE_MAX_CARDS = 200
 local INVENTARIO_EXTRA_BONUS = 500
-local BASE_RELICARIO_SLOTS = 3
-local BANCO_EXTRA_BONUS = 5
+local BASE_MAX_PLACED_SLOTS = 20 -- teto fixo dos Slots de Base, independente de nível/Renascimento
+local SLOTS_EXTRAS_BONUS = 5
 
 -- Aplica os efeitos "permanentes" (não é por segundo, é só ajustar um
 -- número uma vez) de cada gamepass que o jogador possui. Roda de novo
@@ -37,7 +37,7 @@ local function applyPermanentEffects(player: Player)
 	end
 
 	data.maxCards = BASE_MAX_CARDS + (data.gamepasses.inventarioExtra and INVENTARIO_EXTRA_BONUS or 0)
-	data.relicarioSlots = BASE_RELICARIO_SLOTS + (data.gamepasses.bancoExtra and BANCO_EXTRA_BONUS or 0)
+	data.maxPlacedSlots = BASE_MAX_PLACED_SLOTS + (data.gamepasses.slotsExtras and SLOTS_EXTRAS_BONUS or 0)
 
 	if player.Character then
 		local humanoid = player.Character:FindFirstChildOfClass("Humanoid")

@@ -12,6 +12,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local PlayerDataService = require(ServerScriptService.Server.Systems.PlayerDataService)
 local InventoryService = require(ServerScriptService.Server.Systems.InventoryService)
+local AlbumService = require(ServerScriptService.Server.Systems.AlbumService)
 local PackService = require(ServerScriptService.Server.Systems.PackService)
 local PackCatalog = require(ReplicatedStorage.Shared.Data.PackCatalog)
 local WheelCatalog = require(ReplicatedStorage.Shared.Data.WheelCatalog)
@@ -34,12 +35,12 @@ local function refreshFreeSpinIfNeeded(data)
 	end
 end
 
-local function pickRandomPackOfTierAndClan(tierName: string, clanName: string?): string?
+-- Sorteio de packs disponíveis por categoria (Geral, Especial, etc.)
+local function pickRandomPackByCategory(category: string): string?
 	local candidates = {}
-	for _, packId in PackCatalog.Order do
-		local pack = PackCatalog.Packs[packId]
-		if pack.tier == tierName and (not clanName or pack.clan == clanName) then
-			table.insert(candidates, packId)
+	for key, pack in PackCatalog do
+		if pack.Category == category then
+			table.insert(candidates, pack.Key)
 		end
 	end
 	if #candidates == 0 then
@@ -64,10 +65,19 @@ local function applyPrize(player: Player, prize)
 		data.wheel.bonusSpins += prize.amount
 		resultDetails.amount = prize.amount
 	elseif prize.type == "freePack" then
-		local packId = pickRandomPackOfTierAndClan(prize.packTier, prize.packClan)
-		if packId then
-			resultDetails.packResult = PackService.GrantFreePack(player, packId)
+		local packKey = "Novato" -- padrão: usar Novato
+
+		-- Lógica específica por prêmio: se tiver clã, usar Pack de Clã; senão, sortear Geral
+		if prize.packClan == "Abismo Glacial" then
+			packKey = "ClanAbismoGlacial"
+		elseif prize.packClan then
+			-- Tentar construir key baseado no nome do clã (se outro for adicionado depois)
+			packKey = "Clan" .. prize.packClan:gsub(" ", "")
+		else
+			packKey = pickRandomPackByCategory("Geral") or "Novato"
 		end
+
+		resultDetails.packResult = PackService.GrantFreePack(player, packKey)
 	elseif prize.type == "exclusiveCard" then
 		-- Concede uma criatura aleatória direto na raridade definida pelo
 		-- prêmio, ignorando o sorteio normal de raridade - é o "grande
@@ -79,8 +89,8 @@ local function applyPrize(player: Player, prize)
 		local creatureId = ids[math.random(1, #ids)]
 
 		if InventoryService.HasSpace(player, 1) then
-			local cardId = InventoryService.AddCard(player, creatureId, prize.exclusiveRarity)
-			resultDetails.cardId = cardId
+			AlbumService.RegistrarCopia(player, creatureId, prize.exclusiveRarity)
+			resultDetails.creatureId = creatureId
 			resultDetails.creatureName = Creatures[creatureId].name
 			resultDetails.rarity = prize.exclusiveRarity
 		else

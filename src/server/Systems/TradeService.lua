@@ -18,15 +18,19 @@ local Players = game:GetService("Players")
 local ServerScriptService = game:GetService("ServerScriptService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
-local PlayerDataService = require(ServerScriptService.Server.Systems.PlayerDataService)
 local InventoryService = require(ServerScriptService.Server.Systems.InventoryService)
+local AlbumService = require(ServerScriptService.Server.Systems.AlbumService)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 
 local TradeService = {}
 
+-- Cada oferta é por creatureId (não mais cardId - não existem mais cópias
+-- físicas individuais). Trocar uma criatura move 1 unidade de progresso
+-- (na raridade atual dela) de um lado pro outro, mesma matemática de
+-- SellService.VenderCopias/DonationService.
 -- sessions[sessionId] = {
 --   playerAId, playerBId,
---   offerA = { [cardId] = true }, offerB = { [cardId] = true },
+--   offerA = { [creatureId] = true }, offerB = { [creatureId] = true },
 --   confirmedA = false, confirmedB = false,
 -- }
 local sessions = {}
@@ -116,9 +120,9 @@ function TradeService.StartTrade(playerA: Player, toUserId: number)
 	return sessionId
 end
 
--- Adiciona ou remove uma carta da oferta de um jogador. Qualquer mudança
+-- Adiciona ou remove uma criatura da oferta de um jogador. Qualquer mudança
 -- reseta as duas confirmações (segurança contra "troca de última hora").
-function TradeService.UpdateOffer(player: Player, sessionId: number, cardId: number, include: boolean)
+function TradeService.UpdateOffer(player: Player, sessionId: number, creatureId: number, include: boolean)
 	local session = sessions[sessionId]
 	if not session then
 		return false, "Negociação não encontrada"
@@ -129,26 +133,18 @@ function TradeService.UpdateOffer(player: Player, sessionId: number, cardId: num
 		return false, "Você não faz parte dessa negociação"
 	end
 
-	local data = PlayerDataService.GetData(player)
-	if not data then
-		return false, "Dados não carregados"
-	end
-
 	if include then
-		local card = data.cards[cardId]
-		if not card then
-			return false, "Você não possui essa carta"
-		end
-		if card.placed then
-			return false, "Tire a carta da base antes de oferecer"
+		local entry = AlbumService.GetEntrada(player, creatureId)
+		if not entry then
+			return false, "Você não possui essa criatura"
 		end
 	end
 
 	local offerKey = (side == "A") and "offerA" or "offerB"
 	if include then
-		session[offerKey][cardId] = true
+		session[offerKey][creatureId] = true
 	else
-		session[offerKey][cardId] = nil
+		session[offerKey][creatureId] = nil
 	end
 
 	session.confirmedA = false
@@ -202,55 +198,60 @@ function TradeService.Execute(sessionId: number)
 		return false, "Um dos jogadores saiu do servidor"
 	end
 
-	local dataA = PlayerDataService.GetData(playerA)
-	local dataB = PlayerDataService.GetData(playerB)
-
-	-- Revalida cada carta oferecida - ainda existe, ainda pertence a quem
-	-- ofereceu, ainda não está na base.
-	for cardId in session.offerA do
-		local card = dataA.cards[cardId]
-		if not card or card.placed then
+	-- Revalida cada criatura oferecida - ainda descoberta, ainda pertence a
+	-- quem ofereceu (guarda a raridade atual pra transferir depois).
+	local snapshotA = {}
+	for creatureId in session.offerA do
+		local entry = AlbumService.GetEntrada(playerA, creatureId)
+		if not entry then
 			sessions[sessionId] = nil
-			return false, "Oferta de " .. playerA.Name .. " ficou inválida (carta movida/vendida)"
+			return false, "Oferta de " .. playerA.Name .. " ficou inválida (criatura vendida/sacrificada)"
+		end
+		snapshotA[creatureId] = entry.raridade
+	end
+	local snapshotB = {}
+	for creatureId in session.offerB do
+		local entry = AlbumService.GetEntrada(playerB, creatureId)
+		if not entry then
+			sessions[sessionId] = nil
+			return false, "Oferta de " .. playerB.Name .. " ficou inválida (criatura vendida/sacrificada)"
+		end
+		snapshotB[creatureId] = entry.raridade
+	end
+
+	-- Checa capacidade de Mochila dos dois lados antes de mover qualquer coisa
+	-- (só conta como "descoberta nova" pro destinatário se ele ainda não tiver
+	-- aquela criatura).
+	local newForA, newForB = 0, 0
+	for creatureId in session.offerB do
+		if not AlbumService.GetEntrada(playerA, creatureId) then
+			newForA += 1
 		end
 	end
-	for cardId in session.offerB do
-		local card = dataB.cards[cardId]
-		if not card or card.placed then
-			sessions[sessionId] = nil
-			return false, "Oferta de " .. playerB.Name .. " ficou inválida (carta movida/vendida)"
+	for creatureId in session.offerA do
+		if not AlbumService.GetEntrada(playerB, creatureId) then
+			newForB += 1
 		end
 	end
 
-	-- Checa capacidade de Mochila dos dois lados antes de mover qualquer coisa.
-	local countA = 0
-	for _ in session.offerA do
-		countA += 1
-	end
-	local countB = 0
-	for _ in session.offerB do
-		countB += 1
-	end
-
-	if not InventoryService.HasSpace(playerA, countB - countA) then
+	if not InventoryService.HasSpace(playerA, newForA) then
 		sessions[sessionId] = nil
 		return false, "Mochila de " .. playerA.Name .. " não tem espaço suficiente"
 	end
-	if not InventoryService.HasSpace(playerB, countA - countB) then
+	if not InventoryService.HasSpace(playerB, newForB) then
 		sessions[sessionId] = nil
 		return false, "Mochila de " .. playerB.Name .. " não tem espaço suficiente"
 	end
 
-	-- Move tudo: A entrega pra B, B entrega pra A.
-	for cardId in session.offerA do
-		local card = dataA.cards[cardId]
-		InventoryService.RemoveCard(playerA, cardId)
-		InventoryService.AddCard(playerB, card.creatureId, card.rarity, card.grade)
+	-- Move tudo: A entrega pra B, B entrega pra A (1 unidade de progresso na
+	-- raridade atual de cada criatura ofertada).
+	for creatureId, rarity in snapshotA do
+		AlbumService.RemoverPontos(playerA, creatureId, 1)
+		AlbumService.RegistrarCopia(playerB, creatureId, rarity)
 	end
-	for cardId in session.offerB do
-		local card = dataB.cards[cardId]
-		InventoryService.RemoveCard(playerB, cardId)
-		InventoryService.AddCard(playerA, card.creatureId, card.rarity, card.grade)
+	for creatureId, rarity in snapshotB do
+		AlbumService.RemoverPontos(playerB, creatureId, 1)
+		AlbumService.RegistrarCopia(playerA, creatureId, rarity)
 	end
 
 	sessions[sessionId] = nil

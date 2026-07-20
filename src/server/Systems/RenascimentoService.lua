@@ -1,9 +1,15 @@
 --[[
 	RenascimentoService.lua
-	Checa a Prova do Renascimento atual e processa o reset quando o
-	jogador confirma: zera dinheiro e coleção (exceto o que está no
-	Relicário), reseta nível e contadores, mas concede um multiplicador
-	permanente de $/s e, a cada 2 ciclos, +1 slot de Relicário.
+	Checa a Prova do Renascimento atual (3 requisitos simultâneos: 3 cartas
+	de um clã à escolha livre + 1 criatura específica, ambos via Altar de
+	Sacrifício, + saldo mínimo de Dinheiro) e processa o reset quando o
+	jogador confirma.
+
+	Sob o modelo de Álbum/Mochila (que persiste incondicionalmente através
+	do Renascimento - ver SISTEMA_ALBUM_E_EVOLUCAO.md seção 7), não existe
+	mais "coleção pra proteger" - por isso o Relicário foi removido do
+	projeto por completo. O reset zera SÓ o Dinheiro; Nível, stats, Álbum e
+	Mochila não resetam mais.
 
 	Local: ServerScriptService/Server/Systems/RenascimentoService.lua
 ]]
@@ -12,8 +18,7 @@ local ServerScriptService = game:GetService("ServerScriptService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local PlayerDataService = require(ServerScriptService.Server.Systems.PlayerDataService)
-local InventoryService = require(ServerScriptService.Server.Systems.InventoryService)
-local LevelService = require(ServerScriptService.Server.Systems.LevelService)
+local AltarSacrificioService = require(ServerScriptService.Server.Systems.AltarSacrificioService)
 local RenascimentoCatalog = require(ReplicatedStorage.Shared.Data.RenascimentoCatalog)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 
@@ -21,8 +26,10 @@ local RenascimentoService = {}
 
 local EconomyService = nil -- carregado em Init() pra evitar circular require
 
--- Retorna o status completo da Prova atual (pra UI mostrar progresso),
--- reaproveitando o mesmo checador de requisitos do Nível.
+-- Retorna o status completo da Prova atual (pra UI mostrar progresso).
+-- Requisitos de sacrifício (clã/criatura específica) vêm do
+-- AltarSacrificioService (cumprido = já staged o suficiente); o requisito
+-- de Dinheiro é só um check de saldo atual, não passa pelo Altar.
 function RenascimentoService.GetProvaStatus(player: Player)
 	local data = PlayerDataService.GetData(player)
 	if not data then
@@ -30,11 +37,34 @@ function RenascimentoService.GetProvaStatus(player: Player)
 	end
 
 	local prova = RenascimentoCatalog.GetRequirements(data.renascimentoLevel)
+	local altarStatus = AltarSacrificioService.GetAltarStatus(player)
 	local statuses = {}
 	local allMet = true
 
 	for _, req in prova do
-		local met, current, needed = LevelService.CheckRequirement(player, req)
+		local met, current, needed
+
+		if req.type == "money" then
+			met = data.money >= req.amount
+			current = data.money
+			needed = req.amount
+		else
+			-- sacrificeSpecificCreature / sacrificeCardsByClan: cumprido
+			-- conforme o que já está staged no Altar (não posse simples).
+			local altarReq = nil
+			if altarStatus then
+				for _, s in altarStatus.requirements do
+					if s.requirement == req then
+						altarReq = s
+						break
+					end
+				end
+			end
+			met = altarReq ~= nil and altarReq.satisfied
+			current = altarReq and altarReq.staged or 0
+			needed = req.count or 1
+		end
+
 		table.insert(statuses, { requirement = req, met = met, current = current, needed = needed })
 		if not met then
 			allMet = false
@@ -48,71 +78,61 @@ function RenascimentoService.GetProvaStatus(player: Player)
 	}
 end
 
--- Tenta renascer: reconfirma tudo no servidor, consome os sacrifícios da
--- Prova, e só então executa o reset. Tudo ou nada.
+-- Monta o preview mostrado no popup de confirmação (Fase 5/UI): o que vai
+-- ser sacrificado do Altar + o bônus permanente que será ganho. Não altera
+-- nada - só leitura.
+function RenascimentoService.GetConfirmationPreview(player: Player)
+	local data = PlayerDataService.GetData(player)
+	if not data then
+		return nil
+	end
+
+	local altarStatus = AltarSacrificioService.GetAltarStatus(player)
+	local newRenascimentoLevel = data.renascimentoLevel + 1
+
+	return {
+		staged = altarStatus and altarStatus.staged or {},
+		newRenascimentoMultiplier = 1.0 + newRenascimentoLevel * 0.1,
+		startingMoney = 1000 * newRenascimentoLevel,
+	}
+end
+
+-- Tenta renascer: reconfirma tudo no servidor (staging do Altar pros
+-- requisitos de sacrifício + saldo mínimo de Dinheiro), e só então executa
+-- o reset. Tudo ou nada.
 function RenascimentoService.TryRenascer(player: Player)
 	local data = PlayerDataService.GetData(player)
 	if not data then
 		return false, "Dados não carregados"
 	end
 
-	local prova = RenascimentoCatalog.GetRequirements(data.renascimentoLevel)
-
-	for _, req in prova do
-		local met = LevelService.CheckRequirement(player, req)
-		if not met then
-			return false, "Prova do Renascimento ainda não cumprida"
-		end
+	local status = RenascimentoService.GetProvaStatus(player)
+	if not status or not status.canRenascer then
+		return false, "Prova do Renascimento ainda não cumprida (confira o Altar de Sacrifício e seu saldo)"
 	end
 
-	-- Consome os sacrifícios da Prova (mesmo padrão do LevelService.TryLevelUp)
-	for _, req in prova do
-		if req.type == "sacrificeSpecificCreature" then
-			local matches = InventoryService.FindUnplacedCards(player, function(c)
-				return c.creatureId == req.creatureId
-			end)
-			InventoryService.RemoveCard(player, matches[1])
-		end
-		-- (esse catálogo específico não usa sacrificeMoney/sacrificeCardsByRarity/
-		-- sacrificeCardsByClan, mas dá pra estender aqui do mesmo jeito se um
-		-- ciclo futuro precisar.)
-	end
+	-- Consome de verdade o que está staged no Altar (sem pagamento em $).
+	AltarSacrificioService.ConsumeStagedForProva(player)
 
 	local newRenascimentoLevel = data.renascimentoLevel + 1
-
-	-- Recompensas do ciclo
-	local gotExtraSlot = (newRenascimentoLevel % 2 == 0)
 	local startingMoney = 1000 * newRenascimentoLevel
 
-	-- Reset: dinheiro e coleção (Relicário fica intacto - nem é tocado aqui)
+	-- Reset: SÓ o dinheiro. Nível, stats, Álbum e Mochila persistem de
+	-- propósito (ver cabeçalho do arquivo).
 	data.money = 0
-	data.cards = {}
-	data.placedSlots = {}
-	data.level = 1
-	data.stats = {
-		packsOpened = 0,
-		discoveries = 0,
-		fusions = 0,
-		awakensImproved = 0,
-	}
-
-	-- O que NÃO reseta: diamonds, discovered (Índice), maxCards, autoSell,
-	-- handSlots, relicario - tudo isso é progresso permanente de propósito.
 
 	data.renascimentoLevel = newRenascimentoLevel
 	data.renascimentoMultiplier = 1.0 + newRenascimentoLevel * 0.1
 
-	if gotExtraSlot then
-		data.relicarioSlots += 1
+	if not EconomyService then
+		EconomyService = require(ServerScriptService.Server.Systems.EconomyService)
 	end
-
-	EconomyService.RecalculateIncomePerSecond(player) -- vai dar 0, já que a base ficou vazia
-	EconomyService.AddMoney(player, startingMoney) -- credita o dinheiro inicial e já avisa o cliente
+	EconomyService.RecalculateIncomePerSecond(player)
+	EconomyService.AddMoney(player, startingMoney)
 
 	Remotes.RenascimentoResult:FireClient(player, true, {
 		newRenascimentoLevel = newRenascimentoLevel,
 		newMultiplier = data.renascimentoMultiplier,
-		gotExtraRelicarioSlot = gotExtraSlot,
 		startingMoney = startingMoney,
 	})
 

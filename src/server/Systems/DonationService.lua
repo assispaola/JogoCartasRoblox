@@ -1,10 +1,10 @@
 --[[
 	DonationService.lua
-	Doação unilateral de carta: um jogador entrega uma carta pra outro, sem
-	nada em troca. Mais simples que a Troca (não precisa de confirmação dos
-	dois lados), mas ainda precisa validar tudo no servidor - nunca confiar
-	que o cliente mandou um cardId que realmente pertence a quem está
-	doando.
+	Doação unilateral de carta: um jogador entrega 1 cópia de uma criatura
+	(por creatureId) pra outro, sem nada em troca. Mais simples que a Troca
+	(não precisa de confirmação dos dois lados), mas ainda precisa validar
+	tudo no servidor - nunca confiar que o cliente mandou um creatureId que
+	o doador realmente possui no Álbum.
 
 	Local: ServerScriptService/Server/Systems/DonationService.lua
 ]]
@@ -13,15 +13,18 @@ local Players = game:GetService("Players")
 local ServerScriptService = game:GetService("ServerScriptService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
-local PlayerDataService = require(ServerScriptService.Server.Systems.PlayerDataService)
 local InventoryService = require(ServerScriptService.Server.Systems.InventoryService)
+local AlbumService = require(ServerScriptService.Server.Systems.AlbumService)
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
 
 local DonationService = {}
 
--- Tenta doar uma carta de `fromPlayer` pra `toPlayer`. Retorna true em caso
--- de sucesso, ou false + motivo do erro.
-function DonationService.TryDonate(fromPlayer: Player, toUserId: number, cardId: number)
+-- Tenta doar 1 unidade de progresso (raridade atual) de uma criatura de
+-- `fromPlayer` pra `toPlayer`. Sob o modelo de Álbum (1 registro por
+-- criatura, sem cópias físicas), "doar uma carta" vira "abrir mão de 1
+-- ponto/cópia daquela criatura, e o destinatário registra 1 cópia daquela
+-- raridade" - mesma matemática usada por SellService.VenderCopias.
+function DonationService.TryDonate(fromPlayer: Player, toUserId: number, creatureId: number)
 	if fromPlayer.UserId == toUserId then
 		return false, "Você não pode doar uma carta pra si mesmo"
 	end
@@ -31,36 +34,24 @@ function DonationService.TryDonate(fromPlayer: Player, toUserId: number, cardId:
 		return false, "Jogador de destino não está no servidor"
 	end
 
-	local fromData = PlayerDataService.GetData(fromPlayer)
-	if not fromData then
-		return false, "Dados não carregados"
-	end
-
-	local card = fromData.cards[cardId]
-	if not card then
-		return false, "Você não possui essa carta"
-	end
-
-	if card.placed then
-		return false, "Tire a carta da base antes de doar"
+	local entry = AlbumService.GetEntrada(fromPlayer, creatureId)
+	if not entry then
+		return false, "Você não possui essa criatura"
 	end
 
 	if not InventoryService.HasSpace(toPlayer, 1) then
 		return false, "A Mochila do destinatário está cheia"
 	end
 
-	-- Remove de quem doou e recria do lado de quem recebe, preservando o
-	-- grau de Despertar (a carta chega exatamente como estava, sem resetar
-	-- o progresso investido nela).
-	InventoryService.RemoveCard(fromPlayer, cardId)
-	InventoryService.AddCard(toPlayer, card.creatureId, card.rarity, card.grade)
+	AlbumService.RemoverPontos(fromPlayer, creatureId, 1)
+	AlbumService.RegistrarCopia(toPlayer, creatureId, entry.raridade)
 
 	return true
 end
 
 function DonationService.Init()
-	Remotes.DonateCardRequest.OnServerEvent:Connect(function(fromPlayer: Player, toUserId: number, cardId: number)
-		local success, errorReason = DonationService.TryDonate(fromPlayer, toUserId, cardId)
+	Remotes.DonateCardRequest.OnServerEvent:Connect(function(fromPlayer: Player, toUserId: number, creatureId: number)
+		local success, errorReason = DonationService.TryDonate(fromPlayer, toUserId, creatureId)
 		Remotes.DonateCardResult:FireClient(fromPlayer, success, errorReason)
 
 		if success then

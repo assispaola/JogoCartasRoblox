@@ -21,6 +21,13 @@ local Remotes = require(ReplicatedStorage.Shared.Remotes)
 local Creatures = require(ReplicatedStorage.Shared.Data.Creatures)
 local Rarities = require(ReplicatedStorage.Shared.Data.Rarities)
 local PortalService = require(ServerScriptService.Server.Systems.PortalService)
+local AlbumEvolutionCurve = require(ReplicatedStorage.Shared.Data.AlbumEvolutionCurve)
+-- NOTA: lê `data.album[creatureId]` direto (em vez de chamar
+-- AlbumService.GetEntrada) de propósito - AlbumService.RollDespertar
+-- precisa chamar de volta EconomyService.TrySpendDiamonds/
+-- RecalculateIncomePerSecond, e as duas pontas se requerendo uma à outra
+-- forma uma dependência cíclica real (Luau acusa isso mesmo quando um dos
+-- lados é lazy) - ler o dado bruto aqui evita o ciclo por completo.
 
 local EconomyService = {}
 
@@ -63,10 +70,11 @@ function EconomyService.RecalculateIncomePerSecond(player: Player)
 	end
 
 	local total = 0
-	for _, cardId in data.placedSlots do
-		local card = data.cards[cardId]
-		if card then
-			total += EconomyService.GetCardValue(card)
+	for _, creatureId in data.placedSlots do
+		local albumEntry = data.album[creatureId]
+		if albumEntry then
+			local rarity = AlbumEvolutionCurve.RarityForTotalCopies(albumEntry.totalCopias)
+			total += EconomyService.GetCardValue({ creatureId = creatureId, rarity = rarity, grade = albumEntry.grau })
 		end
 	end
 
@@ -217,10 +225,12 @@ function EconomyService.StartIncomeLoop(player: Player)
 				end
 			else
 				local anyChanged = false
-				for slotId, cardId in data.placedSlots do
-					local card = data.cards[cardId]
-					if card then
-						local cardValue = EconomyService.GetCardValue(card)
+				for slotId, creatureId in data.placedSlots do
+					local albumEntry = data.album[creatureId]
+					if albumEntry then
+						local rarity = AlbumEvolutionCurve.RarityForTotalCopies(albumEntry.totalCopias)
+						local cardValue =
+							EconomyService.GetCardValue({ creatureId = creatureId, rarity = rarity, grade = albumEntry.grau })
 						local cap = cardValue * MAX_PENDING_HOURS * 3600
 						local current = data.slotPending[slotId] or 0
 

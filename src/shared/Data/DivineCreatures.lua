@@ -68,8 +68,8 @@ DivineCreatures.List = {
 	},
 	{
 		order = 7, clan = "Tempestade Rúnica", element = "Trovão",
-		name = "Chaac", origin = "Maia",
-		description = "Senhor da chuva e do raio, cujo machado divino racha os céus em tempestade",
+		name = "Raijin", origin = "Japão (Xintoísmo)",
+		description = "Deus do trovão e da tempestade, tambor divino que ecoa pelos céus",
 		seedValue = 92, attackBase = 57, defenseBase = 45, hpBase = 262,
 		obtainMethod = "Pacote exclusivo de Evento (Robux/sorte)",
 	},

@@ -85,10 +85,11 @@ Remotes.LevelUpResult = getOrCreateRemoteEvent("LevelUpResult") -- servidor -> c
 Remotes.ChallengeStatusRequest = getOrCreateRemoteEvent("ChallengeStatusRequest") -- cliente -> servidor: "me manda o status do desafio atual"
 Remotes.ChallengeStatusUpdated = getOrCreateRemoteEvent("ChallengeStatusUpdated") -- servidor -> cliente: status detalhado dos requisitos
 
--- === Remotes do Relicário ===
-Remotes.MoveToRelicarioRequest = getOrCreateRemoteEvent("MoveToRelicarioRequest") -- cliente -> servidor: guardar carta no Relicário
-Remotes.MoveFromRelicarioRequest = getOrCreateRemoteEvent("MoveFromRelicarioRequest") -- cliente -> servidor: retirar carta do Relicário
-Remotes.RelicarioResult = getOrCreateRemoteEvent("RelicarioResult") -- servidor -> cliente: resultado da tentativa
+-- === Remotes do Altar de Sacrifício ===
+Remotes.StageAltarCreatureRequest = getOrCreateRemoteEvent("StageAltarCreatureRequest") -- cliente -> servidor: "colocar essa criatura no Altar"
+Remotes.UnstageAltarCreatureRequest = getOrCreateRemoteEvent("UnstageAltarCreatureRequest") -- cliente -> servidor: "tirar essa criatura do Altar"
+Remotes.AltarStatusRequest = getOrCreateRemoteEvent("AltarStatusRequest") -- cliente -> servidor: "me manda o status do Altar"
+Remotes.AltarStatusUpdated = getOrCreateRemoteEvent("AltarStatusUpdated") -- servidor -> cliente: status do staging vs. Prova atual
 
 -- === Remotes de Renascimento ===
 Remotes.RenascerRequest = getOrCreateRemoteEvent("RenascerRequest") -- cliente -> servidor: "quero renascer"

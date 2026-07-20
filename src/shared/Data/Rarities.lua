@@ -5,7 +5,7 @@
 -- Sistema de Raridade + Despertar (Grau) + fórmula de valor final.
 -- Substitui a versão antiga (Bronze->Mítico com multiplicadores baixos).
 
-export type RarityId = "Bronze" | "Prata" | "Ouro" | "Platina" | "Lendário" | "Mítico" | "Divino"
+export type RarityId = "Default" | "Bronze" | "Prata" | "Ouro" | "Platina" | "Lendário" | "Mítico" | "Divino"
 
 export type RarityData = {
 	order: number,
@@ -22,7 +22,28 @@ local Rarities = {}
 -- ============================================================
 -- RARIDADES (Bronze -> Divino)
 -- ============================================================
-local raritySeeds = {
+-- Tipo explícito no array - sem isso, Luau infere o shape de cada entrada
+-- a partir da PRIMEIRA (Default, com dropChancePercent = nil), e trata
+-- `dropChancePercent: nil` como um tipo fixo em vez de `number?`, rejeitando
+-- todas as entradas seguintes que usam um number de verdade.
+type RaritySeed = {
+	order: number,
+	id: RarityId,
+	dropChancePercent: number?,
+	duplicatesNeeded: number,
+	valueMultiplier: number,
+	awakenCostDiamonds: number,
+}
+
+local raritySeeds: { RaritySeed } = {
+	-- Default: 8ª raridade, abaixo de Bronze. Não sai em pacote comprável
+	-- (dropChancePercent = nil) - é o estado de nascimento forçado da Bênção
+	-- Diária e o piso pré-Bronze da curva de evolução do Álbum
+	-- (AlbumEvolutionCurve.lua, não este `duplicatesNeeded`, é quem manda nos
+	-- thresholds reais de evolução - este campo só existe por consistência
+	-- de tipo). valueMultiplier abaixo de Bronze é um número de partida,
+	-- ainda não balanceado visualmente com a Paola.
+	{ order = 0, id = "Default",  dropChancePercent = nil, duplicatesNeeded = 5, valueMultiplier = 0.4,   awakenCostDiamonds = 800 },
 	{ order = 1, id = "Bronze",   dropChancePercent = 45, duplicatesNeeded = 3, valueMultiplier = 1,     awakenCostDiamonds = 1200 },
 	{ order = 2, id = "Prata",    dropChancePercent = 25, duplicatesNeeded = 4, valueMultiplier = 6,     awakenCostDiamonds = 2100 },
 	{ order = 3, id = "Ouro",     dropChancePercent = 15, duplicatesNeeded = 5, valueMultiplier = 18,    awakenCostDiamonds = 3300 },
@@ -31,7 +52,7 @@ local raritySeeds = {
 	{ order = 6, id = "Mítico",   dropChancePercent = 2,  duplicatesNeeded = 0, valueMultiplier = 500,   awakenCostDiamonds = 10000 },
 	-- Divino: NÃO sai em pacote normal (dropChancePercent = nil), sem fusão,
 	-- só via pacote de evento. Multiplicador MUITO acima do Mítico.
-	{ order = 7, id = "Divino",   dropChancePercent = nil, duplicatesNeeded = 0, valueMultiplier = 10000, awakenCostDiamonds = 25000 },
+	{ order = 7, id = "Divino",   dropChancePercent = nil, duplicatesNeeded = 0, valueMultiplier = 10000, awakenCostDiamonds = 10000 },
 }
 
 -- `raritySeeds` não tem o campo `nextRarity` ainda (calculado abaixo, olhando
@@ -167,6 +188,7 @@ end
 -- Diamante ganho na primeira descoberta de uma combinação criatura+raridade
 -- (usado pelo sistema de Índice/Diamante do Índice)
 Rarities.DiscoveryDiamondReward = {
+	Default = 2,
 	Bronze = 5,
 	Prata = 10,
 	Ouro = 25,

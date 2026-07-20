@@ -1,26 +1,39 @@
 --[[
 	FusionService.lua
-	Consome N cópias duplicadas de uma criatura/raridade (as de MENOR grau
-	de Despertar primeiro, preservando as que o jogador já investiu) e gera
-	1 cópia nova da próxima raridade, no grau base de Despertar.
+
+	OBSOLETO - substituído pelo AlbumService (evolução automática por pontos
+	acumulados, ver SISTEMA_ALBUM_E_EVOLUCAO.md e AlbumService.lua). Mantido
+	sem uso (não deletado) por enquanto: nem `Init()` nem `TryFuse` são mais
+	chamados por nenhum sistema - `InventoryService.AddCard/RemoveCard/
+	GetUnplacedCopies`, que este arquivo usa abaixo, também não existem mais
+	(Mochila virou por criatura, não por cópia). Não usar como referência
+	pra código novo.
+
+	Comportamento antigo (histórico): consumia N cópias duplicadas de uma
+	criatura/raridade (as de MENOR grau de Despertar primeiro) e gerava 1
+	cópia nova da próxima raridade, no grau base de Despertar.
 
 	Local: ServerScriptService/Server/Systems/FusionService.lua
 ]]
 
-local ServerScriptService = game:GetService("ServerScriptService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
-local InventoryService = require(ServerScriptService.Server.Systems.InventoryService)
-local Creatures = require(ReplicatedStorage.Shared.Data.Creatures)
-local Rarities = require(ReplicatedStorage.Shared.Data.Rarities)
+-- Requires do corpo original (InventoryService/Creatures/Rarities/
+-- StatsService/PortalService) removidos - só sobrevivem dentro do bloco
+-- comentado abaixo, de referência histórica.
 local Remotes = require(ReplicatedStorage.Shared.Remotes)
-local StatsService = require(ServerScriptService.Server.Systems.StatsService)
-local PortalService = require(ServerScriptService.Server.Systems.PortalService)
 
 local FusionService = {}
 
--- Tenta evoluir uma criatura+raridade. Retorna true + dados da nova carta
--- em caso de sucesso, ou false + motivo do erro.
+-- OBSOLETO - corpo original comentado abaixo só de referência histórica.
+-- `InventoryService.GetUnplacedCopies/RemoveCard/AddCard` não existem mais
+-- (Mochila virou por criatura, não por cópia) - chamar isso daria erro.
+function FusionService.TryFuse(player: Player, creatureId: number, rarity: string)
+	return false, "FusionService está obsoleto - evolução agora é automática via AlbumService"
+end
+
+--[[ Corpo original (histórico, não funciona mais - ver AlbumService):
+
 function FusionService.TryFuse(player: Player, creatureId: number, rarity: string)
 	local creature = Creatures[creatureId]
 	if not creature then
@@ -72,6 +85,7 @@ function FusionService.TryFuse(player: Player, creatureId: number, rarity: strin
 		toRarity = rarityData.nextRarity,
 	}
 end
+]]
 
 function FusionService.Init()
 	Remotes.FuseCreatureRequest.OnServerEvent:Connect(function(player: Player, creatureId: number, rarity: string)

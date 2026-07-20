@@ -59,10 +59,10 @@ GamepassCatalog.Gamepasses = {
 		description = "Aumenta a capacidade da Mochila em 500 cartas",
 	},
 	{
-		key = "bancoExtra",
+		key = "slotsExtras",
 		assetId = 0,
-		name = "Relicário +5",
-		description = "Adiciona 5 slots extras ao Relicário",
+		name = "Slots de Base +5",
+		description = "Aumenta o teto de Slots de Base (onde as cartas geram $/s) em 5",
 	},
 	{
 		key = "aberturaRapida",

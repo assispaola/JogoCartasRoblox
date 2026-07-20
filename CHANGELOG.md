@@ -1,3 +1,111 @@
+# Changelog
+
+## [Não lançado] — Correção de modelo: raridade contínua + Prova de Renascimento final
+
+Substitui a modelagem de raridade da entrada anterior deste changelog (pontos
+que somavam e resetavam ao evoluir) e fecha a regra da Prova do Renascimento.
+
+**Corrigido:**
+- **Raridade não é mais um contador de pontos que reseta ao evoluir.** Vira
+  uma função contínua, sempre recalculada a partir de `totalCopias`
+  (`data.album[creatureId] = { totalCopias, grau }`, campo `raridade` foi
+  removido do armazenamento). `AlbumEvolutionCurve.RarityForTotalCopies`
+  deriva a raridade comparando `totalCopias` contra thresholds acumulados de
+  entrada (Default 0 → Bronze 5 → Prata 15 → Ouro 30 → Platina 55 →
+  Lendário 90 → Mítico 140). Cruzar um threshold pra cima OU pra baixo usa a
+  MESMA função (`AlbumService`'s `applyTotalCopias`) — elimina os dois fluxos
+  separados de evolução/downgrade que existiam antes.
+- O antigo "Atalho" (salto instantâneo numa raridade sorteada por pacote)
+  agora é um PISO sobre `totalCopias`: `max(atual + 1, pisoDaRaridade)` —
+  mesmo efeito de antes (pull de alta raridade ainda dá salto), dentro do
+  cálculo único.
+- Migration (`PlayerDataService.migrateCardsToAlbum`) ajustada pra popular
+  `totalCopias` (aproximado pelo piso da maior raridade já alcançada) em vez
+  de `raridade`/`pontos`.
+
+**Alterado — Renascimento:**
+- Prova reformulada pra 3 requisitos simultâneos: sacrificar 3 cartas de um
+  clã sorteado (escolha livre de quais), sacrificar 1 cópia de uma criatura
+  específica fixa, e ter saldo mínimo de Dinheiro (não passa pelo Altar).
+  Substitui a versão anterior (nível mínimo + `ownClanCount` como posse
+  simples).
+- `AltarSacrificioService`: staging vira quantidade por criatura (não mais
+  booleano), cobre os dois tipos de requisito de sacrifício, com cuidado
+  explícito pra não contar a mesma cópia staged duas vezes entre os dois
+  requisitos.
+- `RenascimentoCatalog`: nova curva convexa e agressiva pra quantia mínima de
+  Dinheiro (parâmetros ainda não validados com a Paola — só a estrutura).
+- Novo `RenascimentoService.GetConfirmationPreview` — dados pro popup de
+  confirmação antes de renascer (Fase 5/UI).
+
+---
+
+## [Não lançado] — Sistema de Álbum e Evolução (substitui Fusão manual)
+
+Arquitetura de 3 camadas por criatura descoberta (Álbum / Mochila / Slots de
+Base), ver `SISTEMA_ALBUM_E_EVOLUCAO.md` e `CLAUDE.md`.
+
+**Adicionado:**
+- `AlbumService.lua` (novo) — fonte da verdade de raridade/pontos/grau por
+  criatura; evolução automática por pontos acumulados (curva em
+  `AlbumEvolutionCurve.lua`, novo); consolida o "Índice" (Diamante de
+  descoberta) que antes vivia em `InventoryService.GrantDiscoveryIfNew`.
+- `AltarSacrificioService.lua` (novo) — staging manual de criaturas pra prova
+  de Renascimento.
+- Raridade **Default** (8ª, abaixo de Bronze) em `Rarities.lua` — estado
+  forçado pela Bênção Diária.
+- Gamepass "Slots de Base +5" (`slotsExtras`) em `GamepassCatalog.lua`, teto
+  dos Slots de Base agora vive em `data.maxPlacedSlots` (base 20).
+- Novos campos em `PlayerData_v2`: `album`, `mochila`, `altarSacrificio`,
+  `packStates`, `highestUnlockedGeneralPackId`, `maxPlacedSlots`. Migration
+  automática (idempotente) do modelo antigo por cópia (`data.cards` +
+  `data.relicario`) pro Álbum/Mochila, na primeira carga de um save antigo.
+
+**Alterado:**
+- Mochila: de 1 objeto por cópia física pra 1 objeto por criatura descoberta.
+  `InventoryService`/`EconomyService`/`HandService` reescritos pra operar por
+  `creatureId` em vez de `cardId`.
+- `SellService.VenderCopias` (novo, substitui `TrySell`): vende por
+  `creatureId` + quantidade, com preview antes de aplicar.
+- `DonationService`/`TradeService`: transferem "1 unidade de progresso" de
+  uma criatura (via `AlbumService.RemoverPontos`/`RegistrarCopia`) em vez de
+  mover objetos de carta por `cardId`.
+- `PackService.lua` religado de verdade aos serviços reais (antes era um
+  scaffold nunca inicializado corretamente); `PackOddsRoller`/`PackCatalog`
+  corrigidos pra usar os IDs de raridade acentuados canônicos de
+  `Rarities.lua` (tradução em `PackOddsRoller.ToCanonicalRarityId`).
+- `RenascimentoCatalog`: Provas agora usam `ownClanCount` (posse de X
+  criaturas distintas de um clã) em vez de posse simples; reset do
+  Renascimento passa a zerar **só o Dinheiro** (Nível/stats/Álbum/Mochila
+  persistem — `data.stats` já devia ser cumulativo por design, isso corrige
+  uma inconsistência do código antigo).
+- `LevelService`: requisitos de posse/sacrifício (`ownClan`, `ownClanCount`,
+  `sacrificeCardsByRarity/Clan`, `sacrificeSpecificCreature`) agora leem do
+  Álbum/Mochila; "sacrificar" vira remover 1 ponto (`AlbumService.RemoverPontos`),
+  não mais apagar um objeto de carta inteiro.
+
+**Removido:**
+- **Relicário removido do projeto por completo** (não depreciado — deletado):
+  `RelicarioService.lua`, gamepass "Relicário +5" (`bancoExtra`), campos
+  `data.relicario`/`data.relicarioSlots`, remotes `MoveToRelicarioRequest`/
+  `MoveFromRelicarioRequest`/`RelicarioResult`. Motivo: sob o Álbum, nada é
+  perdido no Renascimento, então não existe mais o que proteger.
+
+**Depreciado (mantido no repo, sem uso real):**
+- `FusionService.lua` — evolução manual por fusão, substituída pela
+  automática do Álbum.
+- `DespertarService.lua` — Despertar por `cardId`, substituído por
+  `AlbumService.RollDespertar` (por `creatureId`).
+
+**Bugs pré-existentes descobertos (não corrigidos, ver CLAUDE.md):**
+- `WheelService`/`DailyBlessingService`/`JourneyChestService` chamam
+  `PackService.GrantFreePack` com um `packId` de um `PackCatalog` antigo
+  (tier+clã) que não existe mais.
+- `MarketplaceService.ProcessReceipt` é sobrescrito duas vezes
+  (`PackService.Init()` e `GamepassService.Init()`) — só o último vale.
+
+---
+
 # Changelog — Sistema de Raridade, Despertar e Divino
 
 Resumo de tudo que foi decidido nesta sessão + onde colar cada arquivo no projeto.
