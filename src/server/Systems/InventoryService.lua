@@ -13,7 +13,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local PlayerDataService = require(ServerScriptService.Server.Systems.PlayerDataService)
 local AlbumService = require(ServerScriptService.Server.Systems.AlbumService)
-local Remotes = require(ReplicatedStorage.Shared.Remotes)
+local Remotes = require(ReplicatedStorage.Shared.Networking.Remotes)
 
 local InventoryService = {}
 

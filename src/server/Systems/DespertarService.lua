@@ -22,7 +22,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 -- StatsService, além de AWAKEN_COST/LUCK_GAMEPASS_BONUS_ROLLS/getExtraRolls)
 -- removidos - só sobrevivem dentro do bloco comentado abaixo, de
 -- referência histórica.
-local Remotes = require(ReplicatedStorage.Shared.Remotes)
+local Remotes = require(ReplicatedStorage.Shared.Networking.Remotes)
 
 local DespertarService = {}
 

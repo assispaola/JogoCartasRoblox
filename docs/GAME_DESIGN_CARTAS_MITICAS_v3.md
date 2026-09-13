@@ -74,6 +74,16 @@ Renascer → Mochila reseta, Álbum persiste, +bônus permanente
 
 ### Sistema de Tiers — 3 níveis por clã
 
+> ⚠️ **Não implementado ainda (confirmado 12/09/2026: trabalho incompleto, não
+> abandono de design).** Não existe `Tiers.lua` no código (chegou a existir
+> numa auditoria anterior, foi removido de novo numa reorganização
+> posterior), criaturas não têm campo `tier`, e o custo de Despertar é hoje
+> **fixo em 15💎 pra qualquer criatura**, não escalado por Tier como a
+> seção 5 abaixo descreve. `Creatures.lua` tem uma coluna "Tier de Poder
+> Natural (lore)" que usa nomes de raridade (Bronze/Prata/...) como flavor
+> narrativo — não é o mesmo conceito de Tier C/B/A e não substitui esta
+> seção. Ver `CLAUDE.md`, seção "Decisões ainda pendentes".
+
 | Tier | Símbolo | Qtd | seedValue | Descrição |
 |---|---|---|---|---|
 | **C** | ⭐ Comum | 10 | ×1 | Entrada |
@@ -126,14 +136,18 @@ raridade_atual = RarityForTotalCopies(totalCopias_atual)
 
 | Raridade | Threshold | Multiplicador | Cor (Hex) |
 |---|---|---|---|
-| Default | ≥ 0 | ×0,4 | `#8a8fa8` (cinza) |
-| Bronze | ≥ 5 | ×1 | `#C98A4B` |
-| Prata | ≥ 15 | ×6 | `#E8ECF0` |
-| Ouro | ≥ 30 | ×18 | `#FFE066` |
-| Platina | ≥ 55 | ×50 | `#A5F3FC` |
-| Lendário | ≥ 90 | ×150 | `#B983FF` |
-| Mítico | ≥ 140 (teto) | ×500 | `#FF4D4D` |
-| **Divino** | N/A | ×10.000 | `#F4D03F` |
+| Default | ≥ 0 | ×0,4 | `#2A2E3D` (grafite) |
+| Bronze | ≥ 5 | ×1 | `#CD7F32` |
+| Prata | ≥ 15 | ×6 | `#E0E6ED` |
+| Ouro | ≥ 30 | ×18 | `#FFD700` |
+| Platina | ≥ 55 | ×50 | `#00F0FF` |
+| Lendário | ≥ 90 | ×150 | `#C800FF` |
+| Mítico | ≥ 140 (teto) | ×500 | `#FF007F` |
+| **Divino** | N/A | ×10.000 | arco-íris (ver seção 24) |
+
+*(Cores atualizadas em 12/09/2026 pra bater com `Colors.lua` — a paleta
+anterior (`#8a8fa8`/`#C98A4B`/`#E8ECF0`/`#FFE066`/`#A5F3FC`/`#B983FF`/`#FF4D4D`)
+foi substituída pela direção de `docs/game-design/moldura_refinada_8tiers.html`.)*
 
 ### Fluxo de abertura de pacote — v3 (sem Atalho)
 
@@ -156,15 +170,24 @@ raridade_atual = RarityForTotalCopies(totalCopias_atual)
 | Grau | Multiplicador | Chance |
 |---|---|---|
 | Vazio (0) | ×1,00 | — |
-| 7,0 | ×1,05 | 36,5% |
+| 7,0 | ×1,05 | 40,0% |
 | 7,5 | ×1,15 | 27,0% |
-| 8,0 | ×1,25 | 18,0% |
-| 8,5 | ×1,50 | 10,0% |
-| 9,0 | ×2,00 | 5,0% |
-| 9,5 | ×2,50 | 2,5% |
-| 10,0 | ×3,00 | 1,0% |
+| 8,0 | ×1,30 | 17,0% |
+| 8,5 | ×1,50 | 9,0% |
+| 9,0 | ×1,75 | 4,5% |
+| 9,5 | ×2,10 | 2,0% |
+| 10,0 | ×2,50 | 0,5% |
+
+*(Tabela alinhada com `Rarities.lua` em 12/09/2026 — código é a fonte de
+verdade confirmada com a Paola; valores anteriores desta tabela [7,0×36,5%,
+8,0×1,25/18%, 10,0×3,00/1%] estavam desatualizados.)*
 
 ### Custos de Despertar (Diamante)
+
+> ⚠️ **Não implementado.** O código usa custo **fixo de 15💎 por tentativa**,
+> não importa Tier/raridade (`AlbumService.AWAKEN_COST`). A escala abaixo por
+> Tier depende do sistema de Tier C/B/A (seção 2), que também não está
+> implementado — ver a mesma pendência lá.
 - Comum (Tier C): 2.500 💎
 - Nobre (Tier B): 5.000 💎
 - Ancestral (Tier A): 7.500 💎
@@ -701,25 +724,32 @@ Pintura digital semi-realista, aura fluida abstrata.
 
 | Raridade | Cor |
 |---|---|
-| Default | Sem borda (border-none) |
-| Bronze | `#C98A4B` |
-| Prata | `#E8ECF0` |
-| Ouro | `#FFE066` |
-| Platina | `#A5F3FC` |
-| Lendário | `#B983FF` |
-| Mítico | `#FF4D4D` |
+| Default | `#2A2E3D` (moldura metálica escura, não mais "sem borda") |
+| Bronze | `#CD7F32` |
+| Prata | `#E0E6ED` |
+| Ouro | `#FFD700` |
+| Platina | `#00F0FF` |
+| Lendário | `#C800FF` |
+| Mítico | `#FF007F` |
 | **Divino** | Especial (ver abaixo) |
 
-### Borda Divina — Refinada v3
+*(Tabela e seção da Borda Divina abaixo atualizadas em 12/09/2026 —
+`CardFrameBuilder.lua`/`DivineBorder.lua` já implementam isso, direto de
+`docs/game-design/moldura_refinada_8tiers.html` e
+`docs/game-design/moldura_carta_divino.html`. Default hoje TEM moldura
+própria, ao contrário do que a versão anterior desta seção dizia.)*
 
-**Especificações:**
-- Base: prateada (cores primárias: prata + pastel)
-- Lascas pastel: violeta, ciano, dourado, rosa
-- **Efeito de giro:** só o anel da borda gira (~4s por volta, mais rápido que antes)
-- **Glow:** aumentado (mais brilho), visível
-- **Saturação:** mais saturada que a versão anterior
+### Borda Divina — Refinada v4 (implementada)
+
+**Especificações (implementadas em `DivineBorder.lua`):**
+- Arco-íris saturado girando: magenta (`#FF007F`) → dourado (`#FFD700`) →
+  ciano (`#00F0FF`) → violeta (`#C800FF`) → volta pro magenta, em faixas
+  (não é mais base prata + lascas pastel)
+- **Efeito de giro:** só o anel da borda gira, 6s por volta (`TweenService`
+  rotacionando o `UIGradient` do `UIStroke`)
+- Hairline interna branca sutil separando a borda da arte
 - **Arte:** fica **totalmente estática** (não gira)
-- Resultado: diferença visual clara e sofisticada em relação às outras bordas
+- Resultado: diferença visual clara e vibrante em relação às outras bordas
 
 ---
 
@@ -729,13 +759,16 @@ Pintura digital semi-realista, aura fluida abstrata.
 
 | Token | Valor |
 |---|---|
-| Background | `#0d1024` |
-| Painel | `#171b34` |
-| Linha | `#2c3157` |
-| Texto | `#f3f2ff` |
-| $ | `#4ade80` |
-| 💎 | `#38bdf8` |
-| Evento | `#ffb020` |
+| Background | `#0b0d1e` |
+| Painel | `#161a35` |
+| Borda | `#4C58C6` |
+| Texto | `#f5f4ff` |
+| $ | `#79E600` |
+| 💎 | `#87E1E8` |
+| Evento | `#FFDA1E` |
+
+*(Alinhado com `Colors.lua` em 12/09/2026 — valores anteriores desta tabela
+eram uma paleta diferente, nunca implementada.)*
 
 ### Telas principais
 1. Lobby/HUD
@@ -763,8 +796,8 @@ Pintura digital semi-realista, aura fluida abstrata.
 - `DivineCreatures.lua` — 15 Divinas
 - `Rarities.lua` — 8 raridades
 - `AlbumEvolutionCurve.lua` — thresholds
-- `PackCatalog.lua` — 62 packs
-- `PackClanCatalog.lua` — 15 packs clã
+- `PackCatalog.lua` — 77 packs (inclui os 15 packs de clã, IDs 31-45; não há
+  `PackClanCatalog.lua` separado)
 - `RenascimentoCatalog.lua` — provas
 
 ---
@@ -786,7 +819,12 @@ Pintura digital semi-realista, aura fluida abstrata.
 
 ✅ **Atalho removido completamente** — todo pacote +1 cópia
 ✅ **Mochila reseta no Renascimento** — jogador reorganiza antes
-✅ **Venda manual removida** — só auto-venda pós-Mítico
+✅ **Venda manual mantida** — `SellService.VenderCopias`, 20% fixo do valor
+de mercado; confirmado com a Paola (12/09/2026) que essa é a intenção atual
+(não "só auto-venda pós-Mítico" como versões anteriores desta seção diziam).
+Auto-venda pós-Mítico existe como feature isolada e **desligada**
+(`FEATURE_AUTOSELL_POST_MITICO = false`), complementar à venda manual, não
+substituta dela.
 ✅ **Streak de Login** — diferente do pacote Daily Blessings
 ✅ **Cores dos 15 clãs** — finalizadas e aprovadas
 ✅ **Borda Divina refinada** — glow +, saturação +, rotação mais rápida

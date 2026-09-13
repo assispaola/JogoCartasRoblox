@@ -16,7 +16,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local PortalCatalog = require(ReplicatedStorage.Shared.Data.PortalCatalog)
 local Clans = require(ReplicatedStorage.Shared.Data.Clans)
-local Remotes = require(ReplicatedStorage.Shared.Remotes)
+local Remotes = require(ReplicatedStorage.Shared.Networking.Remotes)
 
 local PortalService = {}
 

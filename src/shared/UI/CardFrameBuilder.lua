@@ -21,42 +21,48 @@
 local CardFrameBuilder = {}
 
 -- Gradiente metálico por raridade (5 pontos de parada: escuro→claro→médio→claro→escuro)
--- Direto da especificação em moldura_raridade_final.md
+-- Direto de docs/game-design/moldura_refinada_8tiers.html (8 tiers Default->Divino)
 local RARITY_STYLES = {
+	Default = {
+		gradient = { Color3.fromHex("15171F"), Color3.fromHex("2A2E3D"), Color3.fromHex("20222E"), Color3.fromHex("2A2E3D"), Color3.fromHex("15171F") },
+		textColor = Color3.fromHex("2A2E3D"),
+		strokeWidth = 2,
+		complexity = 0,
+	},
 	Bronze = {
-		gradient = { Color3.fromHex("5C3A1A"), Color3.fromHex("C98A4B"), Color3.fromHex("8C5A2B"), Color3.fromHex("C98A4B"), Color3.fromHex("5C3A1A") },
-		textColor = Color3.fromHex("C98A4B"),
+		gradient = { Color3.fromHex("6E4A1F"), Color3.fromHex("CD7F32"), Color3.fromHex("A0621F"), Color3.fromHex("CD7F32"), Color3.fromHex("6E4A1F") },
+		textColor = Color3.fromHex("CD7F32"),
 		strokeWidth = 2.5,
 		complexity = 1,
 	},
 	Prata = {
-		gradient = { Color3.fromHex("6E747C"), Color3.fromHex("E8ECF0"), Color3.fromHex("B8BEC7"), Color3.fromHex("E8ECF0"), Color3.fromHex("6E747C") },
-		textColor = Color3.fromHex("D3D8DE"),
+		gradient = { Color3.fromHex("9AA3AE"), Color3.fromHex("E0E6ED"), Color3.fromHex("C3CAD3"), Color3.fromHex("E0E6ED"), Color3.fromHex("9AA3AE") },
+		textColor = Color3.fromHex("E0E6ED"),
 		strokeWidth = 2.5,
 		complexity = 2,
 	},
 	Ouro = {
-		gradient = { Color3.fromHex("8A6410"), Color3.fromHex("FFE066"), Color3.fromHex("D4A017"), Color3.fromHex("FFE066"), Color3.fromHex("8A6410") },
-		textColor = Color3.fromHex("FFD34D"),
+		gradient = { Color3.fromHex("8A6410"), Color3.fromHex("FFD700"), Color3.fromHex("D4A017"), Color3.fromHex("FFD700"), Color3.fromHex("8A6410") },
+		textColor = Color3.fromHex("FFD700"),
 		strokeWidth = 3,
 		complexity = 3,
 	},
 	Platina = {
-		gradient = { Color3.fromHex("155E75"), Color3.fromHex("A5F3FC"), Color3.fromHex("22D3EE"), Color3.fromHex("A5F3FC"), Color3.fromHex("155E75") },
-		textColor = Color3.fromHex("A5F3FC"),
+		gradient = { Color3.fromHex("007A80"), Color3.fromHex("00F0FF"), Color3.fromHex("00B8C4"), Color3.fromHex("00F0FF"), Color3.fromHex("007A80") },
+		textColor = Color3.fromHex("00F0FF"),
 		strokeWidth = 3,
 		complexity = 4,
 	},
 	["Lendário"] = {
-		gradient = { Color3.fromHex("5B1E7A"), Color3.fromHex("E0AAFF"), Color3.fromHex("9B4DCA"), Color3.fromHex("E0AAFF"), Color3.fromHex("5B1E7A") },
-		textColor = Color3.fromHex("E0AAFF"),
+		gradient = { Color3.fromHex("5B0080"), Color3.fromHex("C800FF"), Color3.fromHex("8C00B8"), Color3.fromHex("C800FF"), Color3.fromHex("5B0080") },
+		textColor = Color3.fromHex("C800FF"),
 		strokeWidth = 3.5,
 		complexity = 5,
 		glowBackground = true,
 	},
 	["Mítico"] = {
-		gradient = { Color3.fromHex("FF6EC7"), Color3.fromHex("FFD86C"), Color3.fromHex("6EE7FF"), Color3.fromHex("C77DFF"), Color3.fromHex("FF6EC7") },
-		textColor = Color3.fromHex("FFF6E0"),
+		gradient = { Color3.fromHex("8A0044"), Color3.fromHex("FF007F"), Color3.fromHex("C40062"), Color3.fromHex("FF007F"), Color3.fromHex("8A0044") },
+		textColor = Color3.fromHex("FF007F"),
 		strokeWidth = 3.5,
 		complexity = 6,
 		glowBackground = true,

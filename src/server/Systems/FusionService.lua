@@ -2,7 +2,7 @@
 	FusionService.lua
 
 	OBSOLETO - substituído pelo AlbumService (evolução automática por pontos
-	acumulados, ver SISTEMA_ALBUM_E_EVOLUCAO.md e AlbumService.lua). Mantido
+	acumulados, ver CLAUDE.md e AlbumService.lua). Mantido
 	sem uso (não deletado) por enquanto: nem `Init()` nem `TryFuse` são mais
 	chamados por nenhum sistema - `InventoryService.AddCard/RemoveCard/
 	GetUnplacedCopies`, que este arquivo usa abaixo, também não existem mais
@@ -21,7 +21,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 -- Requires do corpo original (InventoryService/Creatures/Rarities/
 -- StatsService/PortalService) removidos - só sobrevivem dentro do bloco
 -- comentado abaixo, de referência histórica.
-local Remotes = require(ReplicatedStorage.Shared.Remotes)
+local Remotes = require(ReplicatedStorage.Shared.Networking.Remotes)
 
 local FusionService = {}
 

@@ -13,9 +13,8 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local PlayerDataService = require(ServerScriptService.Server.Systems.PlayerDataService)
 local InventoryService = require(ServerScriptService.Server.Systems.InventoryService)
 local PackService = require(ServerScriptService.Server.Systems.PackService)
-local PackCatalog = require(ReplicatedStorage.Shared.Data.PackCatalog)
 local DailyBlessingCatalog = require(ReplicatedStorage.Shared.Data.DailyBlessingCatalog)
-local Remotes = require(ReplicatedStorage.Shared.Remotes)
+local Remotes = require(ReplicatedStorage.Shared.Networking.Remotes)
 
 local DailyBlessingService = {}
 

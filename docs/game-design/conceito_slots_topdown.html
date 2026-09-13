@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Spec — Slots de Base (vista de cima, flat)</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@600;700;800&family=JetBrains+Mono:wght@500;600;700&display=swap');
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  background: #0d1024;
+  color: #EDE6D6;
+  font-family: 'Manrope', sans-serif;
+  padding: 48px 32px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.eyebrow { font-size:11px; letter-spacing:.25em; color:#C9A959; text-transform:uppercase; margin-bottom:10px; }
+h1 { font-size:22px; color:#F4EEDD; margin-bottom:8px; text-align:center; font-weight:800; }
+.legend { font-size:12px; color:#8A7F68; margin-bottom:40px; text-align:center; max-width:680px; line-height:1.7; }
+
+.row { display:flex; gap:36px; flex-wrap:wrap; justify-content:center; align-items:flex-start; }
+.col { width: 250px; display:flex; flex-direction:column; align-items:center; }
+.floor { background:#080a16; border-radius:10px; padding:16px 0; width:100%; display:flex; justify-content:center; }
+.state-name { font-size:14px; font-weight:800; color:#F4EEDD; margin:16px 0 4px; text-align:center; }
+.state-tag { font-size:9px; font-family:'JetBrains Mono',monospace; letter-spacing:1px; color:#8A7F68; text-transform:uppercase; margin-bottom:16px; }
+
+.spec-list { list-style:none; width:100%; font-family:'JetBrains Mono',monospace; font-size:10.5px; color:#B8B2A0; text-align:left; }
+.spec-list li { padding:6px 0; border-top:1px solid #1e2340; display:flex; justify-content:space-between; gap:8px; }
+.spec-list li:first-child { border-top:none; }
+.spec-list b { color:#C9A959; font-weight:600; flex-shrink:0; }
+.spec-list span { text-align:right; }
+</style>
+</head>
+<body>
+
+<div class="eyebrow">Atlas Iluminado — Spec de Implementação</div>
+<h1>Slots de Base — vista de cima (piso)</h1>
+<p class="legend">
+  Mesmos 3 estados, agora como aparecem no chão da Base (câmera de cima,
+  estilo simulador). Cada altar é um círculo rúnico gravado no piso; a
+  carta equipada aparece como um pequeno holograma flutuando acima do
+  centro — visto de cima, isso vira só um ponto de luz colorido.
+</p>
+
+<div class="row">
+
+  <!-- ESTADO 1: TRANCADO -->
+  <div class="col">
+    <div class="floor">
+    <svg width="140" height="140" viewBox="0 0 140 140">
+      <circle cx="70" cy="70" r="52" fill="#0d1024"/>
+      <circle cx="70" cy="70" r="50" fill="none" stroke="#23273f" stroke-width="1.5" stroke-dasharray="4 4"/>
+      <circle cx="70" cy="70" r="34" fill="none" stroke="#23273f" stroke-width="1" stroke-dasharray="2 3"/>
+      <text x="70" y="76" text-anchor="middle" font-size="20" fill="#2a2e47" font-family="Manrope" font-weight="800">14</text>
+    </svg>
+    </div>
+    <div class="state-name">Trancado</div>
+    <div class="state-tag">locked / não desbloqueado</div>
+    <ul class="spec-list">
+      <li><b>piso</b><span>#0d1024</span></li>
+      <li><b>anel externo</b><span>1.5px dashed #23273f, r=50</span></li>
+      <li><b>anel interno (rúnico)</b><span>1px dashed #23273f, r=34</span></li>
+      <li><b>número</b><span>20px, #2a2e47, sem brilho</span></li>
+      <li><b>holograma</b><span>nenhum</span></li>
+      <li><b>regra de unlock</b><span>+1 slot a cada 2 ciclos</span></li>
+    </ul>
+  </div>
+
+  <!-- ESTADO 2: DESBLOQUEADO VAZIO -->
+  <div class="col">
+    <div class="floor">
+    <svg width="140" height="140" viewBox="0 0 140 140">
+      <circle cx="70" cy="70" r="52" fill="#171b34"/>
+      <circle cx="70" cy="70" r="50" fill="none" stroke="#C9A959" stroke-width="2"/>
+      <circle cx="70" cy="70" r="34" fill="none" stroke="#C9A959" stroke-width="1" opacity="0.6"/>
+      <circle cx="70" cy="70" r="50" fill="none" stroke="#C9A959" stroke-width="10" opacity="0.08"/>
+      <g stroke="#C9A959" stroke-width="1" opacity="0.5">
+        <line x1="70" y1="20" x2="70" y2="30"/>
+        <line x1="70" y1="110" x2="70" y2="120"/>
+        <line x1="20" y1="70" x2="30" y2="70"/>
+        <line x1="110" y1="70" x2="120" y2="70"/>
+      </g>
+      <line x1="60" y1="70" x2="80" y2="70" stroke="#C9A959" stroke-width="2"/>
+      <line x1="70" y1="60" x2="70" y2="80" stroke="#C9A959" stroke-width="2"/>
+    </svg>
+    </div>
+    <div class="state-name">Desbloqueado — vazio</div>
+    <div class="state-tag">unlocked / sem carta</div>
+    <ul class="spec-list">
+      <li><b>piso</b><span>#171b34</span></li>
+      <li><b>anel externo</b><span>2px solid #C9A959, r=50</span></li>
+      <li><b>glow do piso</b><span>#C9A959, opacity .08</span></li>
+      <li><b>marcas cardeais</b><span>4 traços finos, r=20-30/110-120</span></li>
+      <li><b>centro</b><span>ícone "+", sem holograma</span></li>
+      <li><b>interação</b><span>pisar/tap → abre Mochila</span></li>
+    </ul>
+  </div>
+
+  <!-- ESTADO 3: DESBLOQUEADO OCUPADO -->
+  <div class="col">
+    <div class="floor">
+    <svg width="140" height="140" viewBox="0 0 140 140">
+      <circle cx="70" cy="70" r="52" fill="#171b34"/>
+      <circle cx="70" cy="70" r="50" fill="none" stroke="#C800FF" stroke-width="2.5"/>
+      <circle cx="70" cy="70" r="50" fill="none" stroke="#C800FF" stroke-width="14" opacity="0.14"/>
+      <circle cx="70" cy="70" r="34" fill="none" stroke="#C800FF" stroke-width="1" opacity="0.5"/>
+      <circle cx="70" cy="70" r="34" fill="#C800FF" opacity="0.10"/>
+      <circle cx="70" cy="70" r="11" fill="#C800FF" opacity="0.85"/>
+      <circle cx="70" cy="70" r="16" fill="none" stroke="#C800FF" stroke-width="1" opacity="0.4"/>
+      <text x="70" y="112" text-anchor="middle" font-size="8" fill="#4ade80" font-family="'JetBrains Mono',monospace" font-weight="700">+$180.5K/s</text>
+    </svg>
+    </div>
+    <div class="state-name">Desbloqueado — ocupado</div>
+    <div class="state-tag">unlocked / com carta</div>
+    <ul class="spec-list">
+      <li><b>piso</b><span>#171b34</span></li>
+      <li><b>anel externo</b><span>2.5px solid = cor raridade</span></li>
+      <li><b>glow do piso</b><span>cor raridade, opacity .14</span></li>
+      <li><b>ponto central</b><span>= holograma da carta (top view)</span></li>
+      <li><b>raio do ponto</b><span>11px, opacity .85</span></li>
+      <li><b>$/s</b><span>#4ade80, abaixo do círculo</span></li>
+      <li><b>altura real (3D)</b><span>carta flutua ~1.2 studs acima</span></li>
+    </ul>
+  </div>
+
+</div>
+
+</body>
+</html>

@@ -6,7 +6,7 @@
 	jogador confirma.
 
 	Sob o modelo de Álbum/Mochila (que persiste incondicionalmente através
-	do Renascimento - ver SISTEMA_ALBUM_E_EVOLUCAO.md seção 7), não existe
+	do Renascimento - ver CLAUDE.md, seção "Renascimento + Altar de Sacrifício"), não existe
 	mais "coleção pra proteger" - por isso o Relicário foi removido do
 	projeto por completo. O reset zera SÓ o Dinheiro; Nível, stats, Álbum e
 	Mochila não resetam mais.
@@ -20,7 +20,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local PlayerDataService = require(ServerScriptService.Server.Systems.PlayerDataService)
 local AltarSacrificioService = require(ServerScriptService.Server.Systems.AltarSacrificioService)
 local RenascimentoCatalog = require(ReplicatedStorage.Shared.Data.RenascimentoCatalog)
-local Remotes = require(ReplicatedStorage.Shared.Remotes)
+local Remotes = require(ReplicatedStorage.Shared.Networking.Remotes)
 
 local RenascimentoService = {}
 

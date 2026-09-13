@@ -16,7 +16,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local PlayerDataService = require(ServerScriptService.Server.Systems.PlayerDataService)
 local Rarities = require(ReplicatedStorage.Shared.Data.Rarities)
 local Clans = require(ReplicatedStorage.Shared.Data.Clans)
-local Remotes = require(ReplicatedStorage.Shared.Remotes)
+local Remotes = require(ReplicatedStorage.Shared.Networking.Remotes)
 
 local AutoSellService = {}
 

@@ -14,7 +14,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local AlbumService = require(ServerScriptService.Server.Systems.AlbumService)
 local Creatures = require(ReplicatedStorage.Shared.Data.Creatures)
-local Remotes = require(ReplicatedStorage.Shared.Remotes)
+local Remotes = require(ReplicatedStorage.Shared.Networking.Remotes)
 
 local SellService = {}
 
@@ -23,7 +23,7 @@ local SellService = {}
 local SELL_PERCENTAGE = 0.20
 
 -- Venda Automática pós-Mítico: proposta ainda não confirmada pela Paola
--- (ver SISTEMA_ALBUM_E_EVOLUCAO.md seção 9) - função isolada, DESLIGADA por
+-- (ver CLAUDE.md, seção "Decisões ainda pendentes") - função isolada, DESLIGADA por
 -- padrão, não ligada à abertura de pacote enquanto o flag estiver off.
 local FEATURE_AUTOSELL_POST_MITICO = false
 

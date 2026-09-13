@@ -1,5 +1,41 @@
 # Changelog
 
+## [Não lançado] — Auditoria de docs vs. código real (12/09/2026)
+
+Sessão de auditoria comparando toda a `docs/` contra o código atual — não
+mudou nenhum sistema de jogo, só a documentação.
+
+**Corrigido:**
+- `CLAUDE.md` movido de volta pra raiz do projeto (estava em `docs/CLAUDE.md`,
+  onde o Claude Code não carrega automaticamente).
+- `CLAUDE.md`: contagem de pacotes (62→77), nota da cor `Chama Vulcânica`
+  (marcada como resolvida, não mais pendente), descrição da borda Divino
+  (arco-íris, não mais prata/pastel), caminhos de `Remotes.lua` e
+  `DebugTest.server.lua` na árvore de pastas.
+- `docs/GAME_DESIGN_CARTAS_MITICAS_v3.md`: descrição da borda Divino, tabela
+  de Graus de Despertar (alinhada com `Rarities.lua`), texto sobre venda
+  manual (o código tem `SellService.VenderCopias` ativo, não foi removida).
+- `docs/UI_TELAS_DESENVOLVIMENTO.md`: contagem de pacotes (62→77), paleta de
+  cores de raridade/UI alinhada com `Colors.lua`.
+- `README.md`: contagem de pacotes (62→77), referência a `Notifications.lua`
+  (não existe mais, virou `MoneyCounter.lua`).
+
+**Adicionado:**
+- Nova seção "Fonte da verdade e manutenção de docs" no `CLAUDE.md`.
+- `docs/archive/` com o histórico de auditoria de 19/07/2026 (relatório,
+  fixes aplicados, próximos passos, resumo e checklist), consolidado.
+
+**Sinalizado (não resolvido, decisão registrada no CLAUDE.md):**
+- Sistema de Tier C/B/A: confirmado como trabalho incompleto (não abandonado)
+  — `Tiers.lua` não existe, criaturas não têm campo `tier`.
+- `docs/Catalogo_Pacotes_Cartas_Miticas.xlsx` e a aba "Pacotes - Catálogo" de
+  `docs/Cartas_Miticas_Clans_e_Criaturas_REVISADA.xlsx` ficaram pra trás
+  (modelo de 62 pacotes) — fonte de verdade de pacotes hoje é
+  `PackCatalog.lua` + `GAME_DESIGN_CARTAS_MITICAS_v3.md`.
+- `docs/Icons_Registry_Corrigido.xlsx` desatualizada/desconectada de `Icons.lua`.
+
+---
+
 ## [Não lançado] — Correção de modelo: raridade contínua + Prova de Renascimento final
 
 Substitui a modelagem de raridade da entrada anterior deste changelog (pontos
@@ -43,7 +79,9 @@ que somavam e resetavam ao evoluir) e fecha a regra da Prova do Renascimento.
 ## [Não lançado] — Sistema de Álbum e Evolução (substitui Fusão manual)
 
 Arquitetura de 3 camadas por criatura descoberta (Álbum / Mochila / Slots de
-Base), ver `SISTEMA_ALBUM_E_EVOLUCAO.md` e `CLAUDE.md`.
+Base), ver `CLAUDE.md` (o doc `SISTEMA_ALBUM_E_EVOLUCAO.md` citado
+originalmente aqui não existe mais no repositório — conteúdo incorporado ao
+`CLAUDE.md`).
 
 **Adicionado:**
 - `AlbumService.lua` (novo) — fonte da verdade de raridade/pontos/grau por
@@ -105,6 +143,13 @@ Base), ver `SISTEMA_ALBUM_E_EVOLUCAO.md` e `CLAUDE.md`.
   (`PackService.Init()` e `GamepassService.Init()`) — só o último vale.
 
 ---
+
+> ⚠️ **Seção legada (histórica) abaixo.** Entrada de uma sessão anterior às
+> duas de cima neste changelog — vários números aqui já foram substituídos:
+> custo de Despertar Divino (25.000💎 abaixo → hoje 10.000💎 em
+> `Rarities.lua`), borda do Divino (prata/pastel abaixo → hoje arco-íris
+> saturado, ver `CLAUDE.md` seção "Divino"). Mantida sem edição por ser
+> registro histórico; não usar como referência de valores atuais.
 
 # Changelog — Sistema de Raridade, Despertar e Divino
 

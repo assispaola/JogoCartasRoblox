@@ -33,7 +33,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local PackCatalog = require(ReplicatedStorage.Shared.Data.PackCatalog)
 local PackOddsRoller = require(ReplicatedStorage.Shared.Data.PackOddsRoller)
 local Creatures = require(ReplicatedStorage.Shared.Data.Creatures)
-local Remotes = require(ReplicatedStorage.Shared.Remotes)
+local Remotes = require(ReplicatedStorage.Shared.Networking.Remotes)
 
 local PlayerDataService = require(ServerScriptService.Server.Systems.PlayerDataService)
 local AlbumService = require(ServerScriptService.Server.Systems.AlbumService)
@@ -128,7 +128,6 @@ function PackService.Init()
 		end
 
 		-- Senão, tenta processar como Dev Product (Diamante) via GamepassService
-		local GamepassService = require(ServerScriptService.Server.Systems.GamepassService)
 		local GamepassCatalog = require(ReplicatedStorage.Shared.Data.GamepassCatalog)
 
 		if GamepassCatalog.DiamondByProductId[receiptInfo.ProductId] then
@@ -262,6 +261,18 @@ local function getPackState(player: Player, packKey: string)
 	return state
 end
 
+-- Intervalo fixo do cooldown pra tipos de disponibilidade baseados em tempo -
+-- nil pros demais (OncePerAccount é permanente, não é "cooldown que conta";
+-- EventWindow depende da janela do evento, não de um timer por jogador).
+local function getCooldownIntervalSeconds(availabilityKind: string): number?
+	if availabilityKind == "DailyLimit" then
+		return SECONDS_PER_DAY
+	elseif availabilityKind == "WeeklyStreak" then
+		return SECONDS_PER_WEEK
+	end
+	return nil
+end
+
 local function markPackOpened(player: Player, packKey: string)
 	local data = PlayerDataService.GetData(player)
 	if not data then
@@ -276,6 +287,15 @@ local function markPackOpened(player: Player, packKey: string)
 
 	state.LastOpenedAt = os.time()
 	state.TimesOpened += 1
+
+	local pack = PackService.GetPack(packKey)
+	local availability = pack and pack.Availability
+	if availability then
+		local intervalSeconds = getCooldownIntervalSeconds(availability.Kind)
+		if intervalSeconds then
+			Remotes.PackCooldownUpdated:FireClient(player, packKey, intervalSeconds)
+		end
+	end
 end
 
 function PackService.CanOpen(player: Player, packKey: string): (boolean, string?)

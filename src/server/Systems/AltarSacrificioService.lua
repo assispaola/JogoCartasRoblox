@@ -29,7 +29,7 @@ local PlayerDataService = require(ServerScriptService.Server.Systems.PlayerDataS
 local AlbumService = require(ServerScriptService.Server.Systems.AlbumService)
 local RenascimentoCatalog = require(ReplicatedStorage.Shared.Data.RenascimentoCatalog)
 local Creatures = require(ReplicatedStorage.Shared.Data.Creatures)
-local Remotes = require(ReplicatedStorage.Shared.Remotes)
+local Remotes = require(ReplicatedStorage.Shared.Networking.Remotes)
 
 local AltarSacrificioService = {}
 

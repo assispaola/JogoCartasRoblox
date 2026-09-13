@@ -33,7 +33,7 @@ local PlayerDataService = require(ServerScriptService.Server.Systems.PlayerDataS
 local Creatures = require(ReplicatedStorage.Shared.Data.Creatures)
 local Rarities = require(ReplicatedStorage.Shared.Data.Rarities)
 local AlbumEvolutionCurve = require(ReplicatedStorage.Shared.Data.AlbumEvolutionCurve)
-local Remotes = require(ReplicatedStorage.Shared.Remotes)
+local Remotes = require(ReplicatedStorage.Shared.Networking.Remotes)
 local StatsService = require(ServerScriptService.Server.Systems.StatsService)
 local PortalService = require(ServerScriptService.Server.Systems.PortalService)
 
@@ -41,8 +41,8 @@ type RarityId = Rarities.RarityId
 
 local AlbumService = {}
 
--- Decisão pendente (ver SISTEMA_ALBUM_E_EVOLUCAO.md seção 8/13 e
--- Checklist_Desenvolvimento.md): se vender/sacrificar uma criatura até 0
+-- Decisão pendente (ver CLAUDE.md, seção "Decisões ainda pendentes"): se
+-- vender/sacrificar uma criatura até 0
 -- cópias deve fazê-la sumir do Álbum/Mochila (liberando capacidade) ou
 -- ficar "descoberta pra sempre". Enquanto não for confirmado pela Paola,
 -- esta função fica isolada e DESLIGADA por padrão - ninguém deve chamá-la

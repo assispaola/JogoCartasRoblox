@@ -1,55 +1,96 @@
 --!strict
 --[[
 	HUDTest.client.lua
-	Script de TESTE — monta o HUD e simula uma economia rodando ao vivo,
-	sem depender ainda do EconomyService real. Serve para validar visualmente
-	o componente antes de conectar aos sistemas reais.
+	Script de TESTE — monta o HUDController completo e simula economia,
+	renascimento, streak e evento do Portal da Sorte rodando ao vivo.
 
-	Localização Rojo sugerida: StarterPlayer/StarterPlayerScripts/HUDTest
+	Localização Rojo: StarterPlayer/StarterPlayerScripts/HUDTest
 
-	Ao apertar Play no Studio, você deve ver:
-	  - $ subindo sozinho (renda passiva simulada)
-	  - 💎 ganhando de tempos em tempos + toast avisando
-	  - Barra de XP enchendo e "levando up" ao encher
-	  - Badges nos ícones de presente/sino aumentando
-
-	IMPORTANTE: este script é só para teste. Quando o EconomyService,
-	PlayerDataService etc. estiverem prontos, substituir os "simulate*"
-	por eventos reais (RemoteEvent / atributos do jogador).
+	Ao apertar Play, você deve ver:
+	  - $ subindo sozinho + $/s fixo
+	  - 💎 ganhando de tempos em tempos + toast
+	  - Progresso de Renascimento enchendo até liberar o Altar
+	  - Card de Streak de Login preenchido
+	  - Notificações aparecendo na lista da direita
+	  - Ícone do Portal da Sorte no canto inferior direito com countdown
+	  - Sidebar (desktop) ou BottomBar (se encolher a janela) navegando
 ]]
 
 local Players = game:GetService("Players")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
-local HUD = require(ReplicatedStorage.Shared.UI.HUD)
+-- Main.client.lua já monta o HUD de produção com dados reais do servidor.
+-- Os dois são LocalScripts irmãos na mesma pasta (Rojo sincroniza ambos), e
+-- rodar os dois juntos monta dois HUDControllers/ScreenGuis sobrepostos —
+-- os chips ficam com números fantasmas de dois estados diferentes por cima
+-- um do outro. Pra usar este teste manual, desative/apague Main.client.lua
+-- no Studio antes de dar Play.
+if script.Parent:FindFirstChild("Main") then
+	warn("[HUDTest] Main.client.lua está presente — pulando montagem duplicada do HUD. Desative Main.client.lua no Studio pra rodar este teste manual.")
+	return
+end
+
+local HUDController = require(script.Parent.UI.HUD.HUDController)
 
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 
 -- ===================== MONTAR O HUD =====================
 
-local hud = HUD.new(playerGui)
+local hud = HUDController.new(playerGui)
 
--- Estado inicial (equivalente ao que viria do PlayerDataService)
 local state = {
 	money = 1_250_000,
 	diamonds = 450,
-	incomePerSecond = 50_000,
-	level = 42,
-	currentXP = 12_450,
-	maxXP = 25_000,
+	incomePerSecond = 35_100,
+	renascimentoCycle = 2,
+	renascimentoMultiplier = 1.85,
+	renascimentoCurrent = 6_250_000,
+	renascimentoTarget = 10_000_000,
+	albumDiscovered = 315,
+	albumTotal = 315,
+	backpackCount = 240,
 }
 
 hud:SetMoney(state.money)
 hud:SetDiamonds(state.diamonds)
 hud:SetIncomePerSecond(state.incomePerSecond)
-hud:SetLevel(state.level, state.currentXP, state.maxXP)
+hud:SetRenascimento(state.renascimentoCycle, state.renascimentoMultiplier)
+hud:SetRenascimentoProgress(state.renascimentoCurrent, state.renascimentoTarget)
+hud:SetAltarStatus(state.renascimentoCurrent >= state.renascimentoTarget)
+hud:SetAlbumProgress(state.albumDiscovered, state.albumTotal)
+hud:SetBackpackCount(state.backpackCount)
 hud:SetBadge("gift", 3)
 hud:SetBadge("bell", 7)
+hud:SetWheelNotification(true)
+hud:SetOfflineEarningsMessage("Você ganhou $3M enquanto estava offline")
+
+hud:SetStreak(7, 7, "Pacote grátis + 50 Diamante!")
+
+hud:PushNotification({
+	icon = "🤝",
+	title = "Pacto dos Guardiões",
+	subtitle = "Trocas disponíveis!",
+	time = "Agora",
+})
+hud:PushNotification({
+	icon = "🎁",
+	title = "Evento de Fim de Semana",
+	subtitle = "Começou! Participe agora.",
+	time = "2m",
+})
+hud:PushNotification({
+	icon = "💎",
+	title = "Desafio Diário",
+	subtitle = "Recompensa disponível!",
+	time = "5m",
+})
+
+hud:OnNavigate(function(key: string)
+	print("[HUDTest] Navegou para:", key)
+end)
 
 -- ===================== SIMULAÇÃO 1: RENDA PASSIVA =====================
--- Credita a renda por segundo de forma gradual (igual ao loop real do jogo)
 
 local accumulator = 0
 RunService.Heartbeat:Connect(function(deltaTime: number)
@@ -63,7 +104,6 @@ RunService.Heartbeat:Connect(function(deltaTime: number)
 end)
 
 -- ===================== SIMULAÇÃO 2: GANHO DE DIAMANTE ALEATÓRIO =====================
--- Simula Roda do Destino / Baús da Jornada premiando o jogador periodicamente
 
 task.spawn(function()
 	while true do
@@ -71,30 +111,48 @@ task.spawn(function()
 		local gained = math.random(20, 120)
 		state.diamonds += gained
 		hud:SetDiamonds(state.diamonds)
-		hud:ShowToast(("✨ Você ganhou %d 💎!"):format(gained), Color3.fromHex("#3ec1ff"))
+		hud:ShowToast(("✨ Você ganhou %d 💎!"):format(gained), Color3.fromHex("#3ec8ff"))
 	end
 end)
 
--- ===================== SIMULAÇÃO 3: PROGRESSO DE XP E LEVEL UP =====================
+-- ===================== SIMULAÇÃO 3: PROGRESSO DO RENASCIMENTO =====================
 
 task.spawn(function()
 	while true do
-		task.wait(math.random(3, 6))
-		local xpGained = math.random(500, 2000)
-		state.currentXP += xpGained
+		task.wait(math.random(2, 4))
+		if state.renascimentoCurrent < state.renascimentoTarget then
+			state.renascimentoCurrent = math.min(
+				state.renascimentoTarget,
+				state.renascimentoCurrent + math.random(200_000, 600_000)
+			)
+			hud:SetRenascimentoProgress(state.renascimentoCurrent, state.renascimentoTarget)
 
-		if state.currentXP >= state.maxXP then
-			state.currentXP -= state.maxXP
-			state.level += 1
-			state.maxXP = math.floor(state.maxXP * 1.15) -- próximo nível exige mais XP
-			hud:ShowToast(("🏅 Nível %d alcançado!"):format(state.level), Color3.fromHex("#ffd23f"))
+			local altarAvailable = state.renascimentoCurrent >= state.renascimentoTarget
+			hud:SetAltarStatus(altarAvailable)
+			if altarAvailable then
+				hud:ShowToast("⛩️ Altar disponível! Você pode Renascer.", Color3.fromHex("#22c55e"))
+			end
 		end
-
-		hud:SetLevel(state.level, state.currentXP, state.maxXP)
 	end
 end)
 
--- ===================== SIMULAÇÃO 4: NOTIFICAÇÕES (presente/sino) =====================
+-- ===================== SIMULAÇÃO 4: PORTAL DA SORTE (evento) =====================
+
+task.spawn(function()
+	local secondsUntilPortal = 5025 -- ~1h23m, igual ao protótipo
+	hud:SetPortalCountdown(secondsUntilPortal, true)
+
+	while secondsUntilPortal > 0 do
+		task.wait(1)
+		secondsUntilPortal -= 1
+		hud:SetPortalCountdown(secondsUntilPortal, true)
+	end
+
+	hud:ShowToast("🌀 Portal da Sorte começou!", Color3.fromHex("#f5b301"))
+	hud:SetPortalCountdown(nil, false)
+end)
+
+-- ===================== SIMULAÇÃO 5: BADGES / NOTIFICAÇÕES =====================
 
 task.spawn(function()
 	local giftCount = 3
@@ -111,4 +169,4 @@ task.spawn(function()
 	end
 end)
 
-print("[HUDTest] HUD montado e simulação de economia rodando. Pressione Play para testar.")
+print("[HUDTest] HUDController montado. Simulação completa rodando — pressione Play para testar.")

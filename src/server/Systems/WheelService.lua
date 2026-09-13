@@ -17,7 +17,7 @@ local PackService = require(ServerScriptService.Server.Systems.PackService)
 local PackCatalog = require(ReplicatedStorage.Shared.Data.PackCatalog)
 local WheelCatalog = require(ReplicatedStorage.Shared.Data.WheelCatalog)
 local Creatures = require(ReplicatedStorage.Shared.Data.Creatures)
-local Remotes = require(ReplicatedStorage.Shared.Remotes)
+local Remotes = require(ReplicatedStorage.Shared.Networking.Remotes)
 
 local WheelService = {}
 

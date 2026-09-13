@@ -23,7 +23,7 @@ local AlbumService = require(ServerScriptService.Server.Systems.AlbumService)
 local StatsService = require(ServerScriptService.Server.Systems.StatsService)
 local ChallengeCatalog = require(ReplicatedStorage.Shared.Data.ChallengeCatalog)
 local Creatures = require(ReplicatedStorage.Shared.Data.Creatures)
-local Remotes = require(ReplicatedStorage.Shared.Remotes)
+local Remotes = require(ReplicatedStorage.Shared.Networking.Remotes)
 
 local LevelService = {}
 

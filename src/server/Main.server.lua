@@ -55,7 +55,7 @@ GamepassService.Init()
 
 -- Remotes de coleta manual de renda (implementados direto aqui, já que
 -- são simples e não precisam de um serviço próprio)
-local Remotes = require(ReplicatedStorage.Shared.Remotes)
+local Remotes = require(ReplicatedStorage.Shared.Networking.Remotes)
 
 Remotes.CollectSlotRequest.OnServerEvent:Connect(function(player: Player, slotId: number)
 	local amount = EconomyService.CollectSlot(player, slotId)

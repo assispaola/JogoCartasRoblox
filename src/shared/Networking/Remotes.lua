@@ -8,7 +8,7 @@
 	ou esquecer de criar um remote em algum lado.
 
 	Uso:
-		local Remotes = require(ReplicatedStorage.Shared.Remotes)
+		local Remotes = require(ReplicatedStorage.Shared.Networking.Remotes)
 		Remotes.MoneyUpdated:FireClient(player, novoValor)
 ]]
 
@@ -47,6 +47,7 @@ Remotes.BuyPackRequest = getOrCreateRemoteEvent("BuyPackRequest") -- cliente -> 
 Remotes.PackOpened = getOrCreateRemoteEvent("PackOpened") -- servidor -> cliente: "aqui está o que você ganhou"
 Remotes.UnlockedPacksRequest = getOrCreateRemoteEvent("UnlockedPacksRequest") -- cliente -> servidor: "me manda os pacotes que já desbloqueei"
 Remotes.UnlockedPacksUpdated = getOrCreateRemoteEvent("UnlockedPacksUpdated") -- servidor -> cliente: lista de pacotes desbloqueados
+Remotes.PackCooldownUpdated = getOrCreateRemoteEvent("PackCooldownUpdated") -- servidor -> cliente: (packKey, segundosRestantes) sempre que um cooldown de pacote começa/muda
 
 -- === Remotes de Colocação na Base (Inventário) ===
 Remotes.PlaceCreatureRequest = getOrCreateRemoteEvent("PlaceCreatureRequest") -- cliente -> servidor: "quero colocar essa carta (cardId) na base"

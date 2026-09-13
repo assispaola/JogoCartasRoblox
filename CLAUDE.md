@@ -23,9 +23,17 @@ mitologia de domínio público ou conteúdo 100% original.
 - **Sync:** Rojo (projeto vive fora do Studio, em `D:\JogoCartasRoblox`, não em
   pasta sincronizada com nuvem — evita conflito de sync do Rojo)
 - **Versionamento:** GitHub
-- **Fonte de verdade dos dados de conteúdo:** `Cartas_Miticas_Clans_e_Criaturas.xlsx`
+- **Fonte de verdade dos dados de conteúdo:** `docs/Cartas_Miticas_Clans_e_Criaturas_REVISADA.xlsx`
   (15 clãs, 300 criaturas base, sistema de raridade, matriz de 1.800 combinações,
-  15 criaturas Divinas)
+  15 criaturas Divinas). Confirmado batendo com o código (raridades, cores de
+  clã, curva de Despertar, Diamante do Índice) em 12/09/2026 — **exceção: a
+  aba "Pacotes - Catálogo" dessa planilha e o arquivo separado
+  `docs/Catalogo_Pacotes_Cartas_Miticas.xlsx` ainda têm o modelo antigo de 62
+  pacotes; a fonte de verdade real de pacotes hoje é `PackCatalog.lua` (77
+  pacotes) + `docs/GAME_DESIGN_CARTAS_MITICAS_v3.md`, não essas planilhas.**
+  `docs/Icons_Registry_Corrigido.xlsx` também está desatualizado/desconectado
+  — pelo menos 2 IDs conferidos (`Album`, `Altar`) não batem com os valores
+  reais em `Icons.lua`; não usar essa planilha como fonte pra novos ícones.
 
 ## Estrutura de pastas (Rojo) — real, atualizada
 
@@ -38,17 +46,21 @@ src/
 │   │   ├── Rarities.lua         -- 8 raridades + Despertar + fórmula de valor (fonte canônica de RarityId)
 │   │   ├── AlbumEvolutionCurve.lua -- thresholds acumulados de raridade (função contínua)
 │   │   ├── DivineCreatures.lua  -- 15 criaturas Divinas (1 por clã)
-│   │   ├── PackCatalog.lua      -- 62 pacotes (odds em chaves ASCII, ver "Grafia" abaixo)
+│   │   ├── PackCatalog.lua      -- 77 pacotes (odds em chaves ASCII, ver "Grafia" abaixo)
 │   │   ├── PackOddsRoller.lua   -- sorteio de raridade/clã/criatura + tradução de grafia
 │   │   ├── RenascimentoCatalog.lua -- Prova do Renascimento por ciclo
 │   │   ├── ChallengeCatalog.lua, WheelCatalog.lua, PortalCatalog.lua,
 │   │   │   DailyBlessingCatalog.lua, JourneyChestCatalog.lua, GamepassCatalog.lua
 │   │   └── CreatureArtIds.lua
-│   ├── Remotes.lua              -- registro central de todos os RemoteEvents
-│   └── UI/CardFrameBuilder.lua
+│   ├── Networking/Remotes.lua   -- registro central de todos os RemoteEvents
+│   └── UI/
+│       ├── CardFrameBuilder.lua -- moldura metálica por raridade (Default..Mítico),
+│       │   direto de docs/game-design/moldura_refinada_8tiers.html
+│       └── Components/          -- Button, Chip, IconButton, ProgressBar, StatBadge,
+│           SquareIconButton, PillActionButton (peças de UI reutilizáveis, HUD v2)
 ├── server/
 │   ├── Main.server.lua          -- ponto de entrada: Init() de todos os serviços, autosave, snapshot
-│   ├── DebugTest.server.lua     -- script de teste manual (apagar quando não precisar mais)
+│   ├── Debug/DebugTest.server.lua -- script de teste manual (apagar quando não precisar mais)
 │   └── Systems/                 -- lógica de servidor (nome real da pasta - NÃO é "Services")
 │       ├── PlayerDataService.lua -- único ponto de acesso ao DataStore + migração de saves antigos
 │       ├── AlbumService.lua     -- fonte da verdade de raridade/grau por criatura (ver seção própria)
@@ -65,7 +77,14 @@ src/
 │       │   WheelService.lua, DailyBlessingService.lua, JourneyChestService.lua
 │       └── FusionService.lua, DespertarService.lua -- OBSOLETOS (ver abaixo), mantidos sem uso
 └── client/
-    └── UI/Cards/ClanBorderColors.lua, DivineBorder.lua
+    ├── Main.client.lua          -- ponto de entrada do client (HUD v2, ver README.md)
+    ├── HUDTest.client.lua       -- script de teste manual do HUD
+    └── UI/
+        ├── Cards/ClanBorderColors.lua, DivineBorder.lua -- borda arco-íris do
+        │   Divino, direto de docs/game-design/moldura_carta_divino.html
+        └── HUD/                 -- BottomBar, HUDController, TopBar, Sidebar,
+            Progress, MoneyCounter (arquitetura "HUD v2", ver README.md pro
+            detalhe de cada componente e o que falta ligar no backend)
 ```
 
 *(Se a estrutura real divergir disso, corrigir este arquivo — o objetivo é ela
@@ -150,7 +169,7 @@ incremento de `totalCopias` que já é usada em todo o resto do sistema.
 ## Sistemas já implementados (server-side)
 
 Economia e renda passiva, Álbum/Mochila/Slots de Base (ver acima), catálogo de
-62 pacotes (religado de verdade ao `AlbumService` — ver nota do `PackService`
+77 pacotes (religado de verdade ao `AlbumService` — ver nota do `PackService`
 abaixo), sistema de nível com desafios gerados por fórmula, Renascimento
 (prestígio, reset só de Dinheiro) via Altar de Sacrifício, Bênção Diária, Baús
 da Jornada, Roda do Destino, Pacto dos Guardiões (doação/troca com
@@ -208,8 +227,14 @@ Despertar: 1 grau por CRIATURA (não mais por cópia), "vazio" (sem badge de UI)
 até 7.0(×1.05)–10.0(×2.5). Independente da raridade — não muda quando o
 totalCopias sobe/desce e a raridade calculada muda junto. Rolado via
 `AlbumService.RollDespertar(player, creatureId)` (substitui
-`DespertarService.TryAwaken`), mesmo custo/risco de antes (resultado sempre
-substitui o grau atual, pra melhor ou pra pior).
+`DespertarService.TryAwaken`), custo **fixo de 15 diamantes por tentativa,
+sempre, não importa a raridade** (`AWAKEN_COST` em `AlbumService.lua`).
+Resultado sempre substitui o grau atual, pra melhor ou pra pior.
+
+⚠️ **`Rarities.lua` tem um campo `awakenCostDiamonds` por raridade (800 a
+10.000) que é MORTO — não é lido por nenhum código real.** O custo de
+verdade é o flat de 15💎 acima. Não usar esse campo como referência de
+custo; existe só porque nunca foi removido da tabela.
 
 Fórmula de valor: `seedValue × 1000 (fator de escala) × multRaridade × multGrau
 × multRenascimento`. Ver `Rarities.lua` pra implementação exata — é a fonte de
@@ -219,7 +244,7 @@ verdade, não recalcular à mão.
 `"Mítico"`) — é a fonte canônica de `RarityId`. `PackCatalog.lua`/
 `PackOddsRoller.lua` usam chaves ASCII sem acento (`Lendario`, `Mitico`)
 porque Luau não aceita acento em nome de campo bareword (só via
-`["Lendário"] = ...`, o que deixaria os 62 pacotes ilegíveis); a tradução
+`["Lendário"] = ...`, o que deixaria os 77 pacotes ilegíveis); a tradução
 acontece em `PackOddsRoller.ToCanonicalRarityId`, chamada no ponto onde o
 resultado do pacote cruza a fronteira pro `AlbumService`.
 
@@ -262,9 +287,16 @@ Geral) também nunca é tocado pelo reset, propositalmente.
 
 ## Divino — status atual (adicionado recentemente, pode ter partes pendentes)
 
-7ª raridade, 15 cartas fixas (1 por clã), sem fusão, só via pacote de evento.
-Identidade visual fixa (dourado + prisma máximo) independe do clã. Borda de UI:
-prata com lascas prismáticas pastel, girando (`DivineBorder.lua`).
+7ª raridade (8ª contando Default), 15 cartas fixas (1 por clã), sem fusão, só
+via pacote de evento (`PortalDivino`, único pacote com odds de Divino = 100%).
+Identidade visual fixa independe do clã. Borda de UI: arco-íris saturado
+(magenta → dourado → ciano → violeta), girando (`DivineBorder.lua`, atualizado
+em 12/09/2026 pra bater com `docs/game-design/moldura_carta_divino.html` —
+substituiu uma versão anterior prata/pastel). As bordas metálicas das outras 7
+raridades (Default..Mítico) vêm de `CardFrameBuilder.lua`, direto de
+`docs/game-design/moldura_refinada_8tiers.html` (também atualizado em
+12/09/2026); ambos os mockups em `docs/game-design/` já estão implementados,
+não são mais referência pendente.
 
 **Pendências conhecidas** (checar se já foram feitas antes de reimplementar):
 - Excluir Divino do sorteio de pacote normal (só deve sair em pacote de evento
@@ -278,11 +310,21 @@ prata com lascas prismáticas pastel, girando (`DivineBorder.lua`).
 
 Não recalcular ou "arredondar" cores sem confirmar — algumas já foram testadas
 e aprovadas com arte real (marcadas como "Fechado" na planilha), outras ainda
-são propostas sem teste. `Chama Vulcânica (#66192B)` está com pendência aberta
-de revisão (conflito de matiz com Forja Ígnea, só 14° de distância).
+são propostas sem teste. `Chama Vulcânica = #3D0F17` — a revisão de matiz
+(conflito com Forja Ígnea) foi resolvida na auditoria de 19/07/2026 (era
+`#66192B`; ver `docs/archive/2026-07-19-auditoria-v3.md`), não é mais
+pendência em aberto.
 
 ## Decisões ainda pendentes (não assumir sozinho, ver flags no código)
 
+- **Sistema de Tier C/B/A** (Comum/Nobre/Ancestral — seedValue e custo de
+  Despertar por tier, `docs/GAME_DESIGN_CARTAS_MITICAS_v3.md` seção 3): está
+  especificado no design mas **não implementado** — não existe `Tiers.lua`
+  (chegou a existir, foi removido de novo numa reorganização posterior),
+  criaturas não têm campo `tier`, e o Despertar usa custo fixo de 15💎 (ver
+  seção de Despertar acima) em vez de escalar por tier. Confirmado com a
+  Paola em 12/09/2026: é **trabalho incompleto**, não abandono de design —
+  ainda precisa ser implementado quando entrar na Fase 5/6.
 - **UX do downgrade ao vender**: automático e silencioso vs. modal de aviso
   mostrando o resultado antes de confirmar (Fase 5/UI).
 - **Criatura vendida/sacrificada até 0 cópias**: some do Álbum/Mochila
@@ -304,7 +346,7 @@ de revisão (conflito de matiz com Forja Ígnea, só 14° de distância).
 - `WheelService.lua`, `DailyBlessingService.lua`, `JourneyChestService.lua`
   chamam `PackService.GrantFreePack(player, packId)` passando um `packId`
   vindo de um `PackCatalog.Order`/`PackCatalog.Packs[packId]` de um modelo
-  antigo (tier+clã) que não existe mais no `PackCatalog.lua` atual (62
+  antigo (tier+clã) que não existe mais no `PackCatalog.lua` atual (77
   pacotes, sorteio uniforme de clã, indexado por `Key` string). Precisam ser
   migrados pra passar uma `Key` válida do catálogo atual.
 - `MarketplaceService.ProcessReceipt` é atribuído tanto em
@@ -312,6 +354,46 @@ de revisão (conflito de matiz com Forja Ígnea, só 14° de distância).
   `Main.server.lua` chama os dois, só o último a rodar (`GamepassService`)
   fica valendo, e a compra de pacotes via Robux nunca chega a processar.
   Precisa de um dispatcher único que combine os dois fluxos de recibo.
+
+## Fonte da verdade e manutenção de docs
+
+Fontes da verdade vivas deste projeto, nesta ordem de precedência quando
+houver conflito (código sempre vence sobre doc — se divergir, o doc está
+desatualizado, não o código):
+
+1. **O código em `src/`** — sempre a verdade sobre o que o jogo faz hoje.
+2. **`CLAUDE.md`** (este arquivo, na raiz do projeto) — visão operacional do
+   estado atual.
+3. **`docs/GAME_DESIGN_CARTAS_MITICAS_v3.md`** — spec de design/números
+   (raridades, pacotes, clãs, economia, Renascimento, Tier C/B/A pendente de
+   implementação).
+4. **`docs/UI_TELAS_DESENVOLVIMENTO.md`** — spec de telas/UI (Mochila, Álbum,
+   Altar, Venda, Pacto, Roda, Bênção, Nível). Ainda é a direção vigente
+   (confirmado 12/09/2026), mesmo com a reescrita "HUD v2" em andamento
+   (ver `README.md`) — as duas coisas não são conflitantes: HUD v2 é a
+   arquitetura de componentes, esse doc é a spec de conteúdo/layout de cada
+   tela.
+5. **`docs/game-design/*.html`** — referência visual (mockups de moldura de
+   carta/borda), não spec funcional. `moldura_carta_divino.html` e
+   `moldura_refinada_8tiers.html` já estão implementados (ver seção Divino
+   acima); `card_ui_proposta_v4.html`, `conceito_slots_spec.html` e
+   `conceito_slots_topdown.html` ainda são referência futura.
+6. **`docs/*.xlsx`** — fonte de dados de conteúdo (criaturas/clãs/raridade),
+   com as exceções de pacotes e ícones documentadas na seção "Stack" acima
+   (essas duas planilhas ficaram pra trás do código).
+
+`docs/CHANGELOG.md` é histórico (log), não fonte da verdade sobre o estado
+atual — não usar pra saber "como o sistema funciona hoje", só "o que mudou e
+quando". Relatórios de auditoria e checklists datados vivem em
+`docs/archive/` e nunca devem ser tratados como spec atual (são fotografia de
+um momento específico, não algo a manter sincronizado).
+
+**Regra de workflow:** sempre que uma mudança de sistema for implementada
+(nova mecânica, novo valor numérico balanceado, nova cor/UI aprovada), os
+docs relevantes da lista acima precisam ser atualizados **na mesma sessão**,
+não depois. Não deixe a documentação acumular divergência do código de novo
+— se não der tempo de atualizar o doc certo, pelo menos deixe uma nota em
+`docs/CHANGELOG.md` sinalizando a divergência pendente.
 
 ## Workflow esperado
 

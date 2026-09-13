@@ -17,7 +17,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerScriptService = game:GetService("ServerScriptService")
 
 local PlayerDataService = require(ServerScriptService.Server.Systems.PlayerDataService)
-local Remotes = require(ReplicatedStorage.Shared.Remotes)
+local Remotes = require(ReplicatedStorage.Shared.Networking.Remotes)
 local Creatures = require(ReplicatedStorage.Shared.Data.Creatures)
 local Rarities = require(ReplicatedStorage.Shared.Data.Rarities)
 local PortalService = require(ServerScriptService.Server.Systems.PortalService)

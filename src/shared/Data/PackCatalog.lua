@@ -598,7 +598,7 @@ PackCatalog.ClanSelvaEsmeralda = {
 	Notes = "Pack de Clã — Selva Esmeralda (sempre disponível)",
 }
 
-PackCatalog.ClanConstelaçãoArcana = {
+PackCatalog["ClanConstelaçãoArcana"] = {
 	Id = 41,
 	Key = "ClanConstelaçãoArcana",
 	Name = "Constelação Arcana",

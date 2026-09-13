@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Spec — Slots de Base (estados)</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@600;700;800&family=JetBrains+Mono:wght@500;600;700&display=swap');
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  background: #0d1024;
+  color: #EDE6D6;
+  font-family: 'Manrope', sans-serif;
+  padding: 48px 32px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.eyebrow { font-size:11px; letter-spacing:.25em; color:#C9A959; text-transform:uppercase; margin-bottom:10px; }
+h1 { font-size:22px; color:#F4EEDD; margin-bottom:8px; text-align:center; font-weight:800; }
+.legend { font-size:12px; color:#8A7F68; margin-bottom:40px; text-align:center; max-width:680px; line-height:1.7; }
+
+.row { display:flex; gap:36px; flex-wrap:wrap; justify-content:center; align-items:flex-start; }
+.col { width: 250px; display:flex; flex-direction:column; align-items:center; }
+.state-name { font-size:14px; font-weight:800; color:#F4EEDD; margin:16px 0 4px; text-align:center; }
+.state-tag { font-size:9px; font-family:'JetBrains Mono',monospace; letter-spacing:1px; color:#8A7F68; text-transform:uppercase; margin-bottom:16px; }
+
+.spec-list { list-style:none; width:100%; font-family:'JetBrains Mono',monospace; font-size:10.5px; color:#B8B2A0; text-align:left; }
+.spec-list li { padding:6px 0; border-top:1px solid #1e2340; display:flex; justify-content:space-between; gap:8px; }
+.spec-list li:first-child { border-top:none; }
+.spec-list b { color:#C9A959; font-weight:600; flex-shrink:0; }
+.spec-list span { text-align:right; }
+</style>
+</head>
+<body>
+
+<div class="eyebrow">Atlas Iluminado — Spec de Implementação</div>
+<h1>Slots de Base — 3 estados</h1>
+<p class="legend">
+  Cada Slot de Base existe em um de 3 estados. Os 33 espaços totais já são
+  desenhados no chão desde o ciclo 0 — o que muda entre eles é só o
+  estado, nunca a posição/layout. Especificações abaixo prontas pra
+  implementar em Roblox UI (Frame + UICorner + UIStroke).
+</p>
+
+<div class="row">
+
+  <!-- ESTADO 1: TRANCADO -->
+  <div class="col">
+    <svg width="140" height="190" viewBox="0 0 140 190">
+      <rect x="4" y="4" width="132" height="182" rx="10" fill="#0d1024" stroke="#3a355c" stroke-width="1.5" stroke-dasharray="4 4"/>
+      <text x="70" y="100" text-anchor="middle" font-size="28" fill="#3a355c" font-family="Manrope" font-weight="800">14</text>
+      <text x="70" y="122" text-anchor="middle" font-size="8" fill="#3a355c" font-family="'JetBrains Mono',monospace">CICLO 26</text>
+      <path d="M60 148 v-8 a10 10 0 0 1 20 0 v8" fill="none" stroke="#3a355c" stroke-width="2"/>
+      <rect x="57" y="148" width="26" height="18" rx="3" fill="none" stroke="#3a355c" stroke-width="2"/>
+    </svg>
+    <div class="state-name">Trancado</div>
+    <div class="state-tag">locked / não desbloqueado</div>
+    <ul class="spec-list">
+      <li><b>fill</b><span>#0d1024</span></li>
+      <li><b>stroke</b><span>1.5px dashed #3a355c</span></li>
+      <li><b>corner radius</b><span>10px</span></li>
+      <li><b>conteúdo</b><span>número do slot + cadeado</span></li>
+      <li><b>número</b><span>28px, #3a355c</span></li>
+      <li><b>sub-label</b><span>"CICLO N" do unlock, 8px mono</span></li>
+      <li><b>interação</b><span>nenhuma (não clicável)</span></li>
+      <li><b>regra de unlock</b><span>+1 slot a cada 2 ciclos</span></li>
+    </ul>
+  </div>
+
+  <!-- ESTADO 2: DESBLOQUEADO VAZIO -->
+  <div class="col">
+    <svg width="140" height="190" viewBox="0 0 140 190">
+      <rect x="4" y="4" width="132" height="182" rx="10" fill="#171b34" stroke="#C9A959" stroke-width="2"/>
+      <rect x="4" y="4" width="132" height="182" rx="10" fill="none" stroke="#C9A959" stroke-width="6" opacity="0.12"/>
+      <circle cx="70" cy="85" r="22" fill="none" stroke="#C9A959" stroke-width="2" stroke-dasharray="3 3"/>
+      <line x1="70" y1="74" x2="70" y2="96" stroke="#C9A959" stroke-width="2.5"/>
+      <line x1="59" y1="85" x2="81" y2="85" stroke="#C9A959" stroke-width="2.5"/>
+      <text x="70" y="132" text-anchor="middle" font-size="9" fill="#8A7F68" font-family="'JetBrains Mono',monospace">EQUIPAR</text>
+    </svg>
+    <div class="state-name">Desbloqueado — vazio</div>
+    <div class="state-tag">unlocked / sem carta</div>
+    <ul class="spec-list">
+      <li><b>fill</b><span>#171b34</span></li>
+      <li><b>stroke</b><span>2px solid #C9A959</span></li>
+      <li><b>glow</b><span>0 0 8px rgba(201,169,89,.3)</span></li>
+      <li><b>conteúdo</b><span>ícone "+" tracejado, central</span></li>
+      <li><b>label</b><span>"EQUIPAR", 9px mono</span></li>
+      <li><b>interação</b><span>tap → abre Mochila</span></li>
+      <li><b>$/s gerado</b><span>0 (slot vazio não gera)</span></li>
+    </ul>
+  </div>
+
+  <!-- ESTADO 3: DESBLOQUEADO OCUPADO -->
+  <div class="col">
+    <svg width="140" height="190" viewBox="0 0 140 190">
+      <rect x="4" y="4" width="132" height="182" rx="10" fill="#171b34" stroke="#C800FF" stroke-width="2.5"/>
+      <rect x="18" y="16" width="104" height="128" rx="6" fill="#2a1f45"/>
+      <rect x="6" y="6" width="128" height="176" rx="8" fill="none" stroke="#C800FF" stroke-width="8" opacity="0.10"/>
+      <rect x="12" y="150" width="116" height="30" rx="6" fill="#0d1024" opacity="0.7"/>
+      <text x="70" y="165" text-anchor="middle" font-size="9" fill="#C800FF" font-weight="700" font-family="Manrope">LENDÁRIO</text>
+      <text x="70" y="176" text-anchor="middle" font-size="10" fill="#4ade80" font-weight="700" font-family="'JetBrains Mono',monospace">+$180.5K/s</text>
+    </svg>
+    <div class="state-name">Desbloqueado — ocupado</div>
+    <div class="state-tag">unlocked / com carta</div>
+    <ul class="spec-list">
+      <li><b>fill</b><span>#171b34</span></li>
+      <li><b>stroke</b><span>2.5px solid = cor da raridade</span></li>
+      <li><b>glow</b><span>cor da raridade, opacity .10</span></li>
+      <li><b>conteúdo</b><span>miniatura da arte da carta</span></li>
+      <li><b>rótulo raridade</b><span>cor da raridade, 9px</span></li>
+      <li><b>$/s</b><span>#4ade80, 10px mono</span></li>
+      <li><b>interação</b><span>tap → preview/trocar carta</span></li>
+      <li><b>fonte da cor</b><span>Rarities.lua (não fixa)</span></li>
+    </ul>
+  </div>
+
+</div>
+
+</body>
+</html>
